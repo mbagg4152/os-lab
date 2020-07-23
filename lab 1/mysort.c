@@ -2,6 +2,35 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+void sort(int arr[], int len){
+    int this;
+    int j;
+
+    for (int i = 0; i < len; i++){
+        this = arr[i];
+        j = i - 1;
+
+        while ((j >= 0) && (arr[j] > this)){
+            arr[j+1] = arr [j];
+            j--;
+        }
+        arr[j+1] = this;
+    }
+
+
+    int fcounter = 0;
+    for (int i = 0; i < len; i++){
+        if (fcounter == 15){
+            printf("%d,\n", arr[i]);
+            fcounter = 0;
+        }
+        else if (i == (len-1)) printf("%d\n", arr[i]);
+        else printf("%d, ", arr[i]);        
+        fcounter++;
+    }
+}
+
+
 int main(){
     
     FILE* numFile = fopen("nums.txt", "r"); // read number file    
@@ -30,10 +59,17 @@ int main(){
     
 
     
-    for (int i = 0; i < used; i++) printf("%d\n", nums[i]);
+    //for (int i = 0; i < used; i++) { printf("%d\n", nums[i]); }
     printf("arr len: %d\n", used);
 
+
+    printf("the numbers from the file, sorted:\n");
+    sort(nums, used);
     free(nums);
     
     return 0;
 }
+
+
+
+
