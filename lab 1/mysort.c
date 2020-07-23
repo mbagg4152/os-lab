@@ -11,16 +11,19 @@ int main(){
     int *nums = (int*) malloc(sizeof(int)*cap); // array to hold nums
 
 
-    // read number file and populate dynamically sized array
+    // read number file and populate dynamically sized array.
     while ((!feof(numFile)) && (used < max)){
         fscanf(numFile, "%d", &temp);
-        printf("used: %d, cap: %d, temp val: %d\n", used, cap, temp);
+        // printf("used: %d, cap: %d, temp val: %d\n", used, cap, temp);
+        
+        
+        // change size of array
         if (used == cap){
             cap = (cap * 2);
             nums = (int*) realloc(nums, sizeof(int)*cap);
         }
 
-        nums[used] = temp;
+        nums[used] = temp; // put number in array
         used++;
     }
     
