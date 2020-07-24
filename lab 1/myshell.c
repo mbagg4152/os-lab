@@ -4,54 +4,63 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-#define MAXIN 50
+#define maxlen 50
+#define good 2
+#define bad -1
 
 const char* key = "quit\n";
+const char* dnl = "\n\n";
+const char* fnl = "\n\n\n\n";
 
 void runSort(char* cname, char* fname);
-
-
-
+int exists(char* fpath); 
 
 int main(int argc, char** argv){
-    char input[MAXIN];
+    char input[maxlen];
     int comp = 1;
-
     while(comp != 0){
         printf("myprompt> ");
-        fgets(input, MAXIN, stdin);
+        fgets(input, maxlen, stdin);
         comp = strcmp(key, input);
-
-        char progArgs[2][50];
-        int inner, count;
-        for (int i = 0; i >= strlen(input); i++){
-            if (input[i] == ' '){
-                progArgs[count][inner] == '\0';
-                count++;
-                inner = 0;
-            }
-            else {
-                progArgs[count][inner] = input[i];
-                inner++;
-            }
+        if(comp == 0) {
+            printf("%sSee ya!%s", fnl, dnl);
+            break;
         }
+        char* cname; // get name of program to run
+        char* fname ; // get argument for program
+        if (strtok(input, " ")) cname = strtok(input, " "); 
+        else cname = " ";
+        if(strtok(NULL, " ")) fname = strtok(NULL, " ");
+        else fname = " ";
 
+        int fnameLen = strlen(fname);
+        fname[fnameLen - 1] = '\0';
 
-
-        runSort(progArgs[0],progArgs[1]);        
-        printf("%s, %s\n", progArgs[0],progArgs[1]);
+        if(exists(cname) == bad) printf("%scan't find specified file %s, try again%s", dnl, cname, dnl);
+        else if(exists(fname) == bad) printf("%scan't find specified file %s, try again%s", dnl, fname, dnl);
+        else {
+            printf("%s", dnl);
+            runSort(cname,fname);
+            printf("%s", dnl);
+        } 
     }
-
     return 0;
 }
 
 void runSort(char* cname, char* fname){
     __pid_t pid = fork();
-    char runner[55] = "./";
-    strcat(runner, cname);
+    char runArg[maxlen + 3] = "./";
+    strcat(runArg, cname);
+
+
     if (pid == 0){
-        char* argv[] = {runner, fname, NULL};
-        execv(argv[0], argv);
-    }
-    else waitpid(pid,0,0);
+        char* args[] = {runArg, fname, NULL};
+        execvp(args[0], args);
+    }   else waitpid(pid,0,0);
 }
+
+int exists(char* fpath){
+    if(access(fpath, F_OK) != bad) return good;
+    else return bad;
+}
+
