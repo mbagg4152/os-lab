@@ -20,7 +20,7 @@ const char* dnl = "\n\n";
 const char* fnl = "\n\n\n\n";
 
 void runSort(char* cname, char* fname);
-int exists(char* fpath); 
+int inDir(char* fpath); 
 
 int main(int argc, char** argv){
     char input[maxlen];
@@ -41,8 +41,8 @@ int main(int argc, char** argv){
             int fnameLen = strlen(fname);
             fname[fnameLen - 1] = '\0';
         
-            if(exists(cname) == bad) printf("%scan't find specified file %s, try again%s", dnl, cname, dnl);
-            else if(exists(fname) == bad) printf("%scan't find specified file %s, try again%s", dnl, fname, dnl);
+            if(inDir(cname) == bad) printf("%scan't find specified file %s, try again%s", dnl, cname, dnl);
+            else if(inDir(fname) == bad) printf("%scan't find specified file %s, try again%s", dnl, fname, dnl);
             else {
                 printf("%s", dnl);
                 runSort(cname,fname);
@@ -53,11 +53,10 @@ int main(int argc, char** argv){
     return 0;
 }
 
-void runSort(char* cname, char* fname){
+void runSort(char* cname, char* fname){ // create process to run mysort
     __pid_t pid = fork();
     char runArg[maxlen + 3] = "./";
     strcat(runArg, cname);
-
 
     if (pid == 0){
         char* args[] = {runArg, fname, NULL};
@@ -65,7 +64,7 @@ void runSort(char* cname, char* fname){
     }   else waitpid(pid,0,0);
 }
 
-int exists(char* fpath){
+int inDir(char* fpath){ // checks if file is present in given path
     if(access(fpath, F_OK) != bad) return good;
     else return bad;
 }
