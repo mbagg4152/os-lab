@@ -1,3 +1,10 @@
+/*
+    Maggie Horton
+    CS-451
+    Summer 2020
+    myshell.c: takes input to either run mysort.c or quit
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,23 +33,22 @@ int main(int argc, char** argv){
             printf("%sSee ya!%s", fnl, dnl);
             break;
         }
-        char* cname; // get name of program to run
-        char* fname ; // get argument for program
-        if (strtok(input, " ")) cname = strtok(input, " "); 
-        else cname = " ";
-        if(strtok(NULL, " ")) fname = strtok(NULL, " ");
-        else fname = " ";
-
-        int fnameLen = strlen(fname);
-        fname[fnameLen - 1] = '\0';
-
-        if(exists(cname) == bad) printf("%scan't find specified file %s, try again%s", dnl, cname, dnl);
-        else if(exists(fname) == bad) printf("%scan't find specified file %s, try again%s", dnl, fname, dnl);
+        char* space = strchr(input, ' ');
+        if(space == NULL) printf("incorrent arg format, try again\n"); // avoid segfault w/ strtok
         else {
-            printf("%s", dnl);
-            runSort(cname,fname);
-            printf("%s", dnl);
-        } 
+            char* cname = strtok(input, " "); // get name of program to run
+            char* fname = strtok(NULL, " "); // get argument for program
+            int fnameLen = strlen(fname);
+            fname[fnameLen - 1] = '\0';
+        
+            if(exists(cname) == bad) printf("%scan't find specified file %s, try again%s", dnl, cname, dnl);
+            else if(exists(fname) == bad) printf("%scan't find specified file %s, try again%s", dnl, fname, dnl);
+            else {
+                printf("%s", dnl);
+                runSort(cname,fname);
+                printf("%s", dnl);
+            }
+        }
     }
     return 0;
 }
