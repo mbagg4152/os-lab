@@ -4,7 +4,8 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-int main(){
-    printf("my-wc\n");
+int main(int argc, char** argv){
+    //char* fname = argv[1];
+    printf("msg from my-wc\n");
     return 0;
 }
