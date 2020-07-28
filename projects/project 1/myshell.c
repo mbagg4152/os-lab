@@ -31,78 +31,80 @@ int comp = 1;
 // function signatures
 char** splitInput(char* input);
 int found(char* fpath);
-int valCount(char** arr); 
+int itemCount(char** arr); 
+void handleInput(char* input);
 void pipeHandler(char* cmdOne, char* cmdTwo);
-int runCmd(char* initCmd);
+void runCmd(char* initCmd, char* txtPath);
+
 
 int main(int argc, char** argv){
     char input[maxlen];
+    printf("Hello and welcome to my humble, simple shell. "
+           "\nIt can run 3 commands: my-cat, my-uniq & my-wc.\n"
+           "These commands are intended to run similarly to their linux "
+           "counterparts except\nwithout all of the fancy flags or man page entries.\n"
+           "Supply a text file name or path to any of the commands, or "
+           "if you're feeling wild,\nfeel free to do some piping "
+           "(as long as you're using the supplied commands.)\n");
     while(comp != 0){
         printf("%smyprompt> ", dn);
         fgets(input, maxlen, stdin);
         comp = strcmp(quit, input);
         if(comp == 0) {
             printf("%sSee ya!%s", dn, dn);
+            kill(0, SIGINT);
             return 0;
-            //kill(0, SIGKILL);
-        }
-        if((input != "\n") && (input != NULL)){ // make sure theres some imput
-            char* space = strchr(input, ' ');
-            if(space == NULL) printf("incorrent arg format, try again\n"); // avoid segfault w/ strtok
-            else { // need to handle as much as cmd file | cmd | cmd
-                char** split = splitInput(input);
-                int slen = valCount(split);
-                printf("vals arr size: %d", slen);
-                char* initCmd = split[0];
-
-                
-
-
-
-                // printf("%s",initCmd);
-                runCmd(initCmd);
-            }
-        
-
-
-
-
-
-            // char* cname = strtok(input, " "); // get name of program to run
-            // char* fname = strtok(NULL, " "); // get argument for program
-            // int fnameLen = strlen(fname);
-            // fname[fnameLen - 1] = '\0'; // just gotta make sure that extra spaces are removed or else it doesnt work right
-        
-            // // maybe instead of tiny little function found, just do what the function does here
-            // if(found(cname) == bad) printf("%scan't find specified file %s, try again%s", dn, cname, dn);
-            // else if(found(fname) == bad) printf("%scan't find specified file %s, try again%s", dn, fname, dn);
-            // else {
-            //     printf("%s", dn);
-            //     runSort(cname,fname);  // tbh could probably just move the stuff from runSort here
-            //     printf("%s", dn);
-            // }
-            }
-
-       
+        } else handleInput(input);
     }
     return 0;
 }
 
-int runCmd(char* initCmd){
+
+void handleInput(char* input){
+    if((input != "\n") && (input != NULL)){ // make sure theres some imput
+        char* space = strchr(input, ' ');
+        if(space == NULL) printf("incorrent arg format, try again\n"); // avoid segfault w/ strtok
+        else { // need to handle as much as cmd file | cmd | cmd
+            char** split = splitInput(input);
+            int items = itemCount(split);
+
+            char* initCmd = split[0];
+            if (found(initCmd) == errflag) printf("\ncan't find file %s\n", initCmd);
+                char* txtPath = split[1];
+                txtPath[(strlen(txtPath)) - 1] = '\0'; // make sure there's no weird chars @ the end
+
+                if(items == 2) { // basic command
+                    runCmd(initCmd, txtPath);
+                } else if((items == 3) || (items == 5)) { // incorrect no. of items supplied
+                    printf("wrong number of items supplied\n");
+                } else if(items == 4) { // single pipe 
+                    runCmd(initCmd, txtPath);
+                } else if(items == 6) { // double pipe
+                    runCmd(initCmd, txtPath);
+                }   
+        }             
+    } else {
+        printf("invalid input\n");
+        return;
+    }
+}
+
+
+void runCmd(char* initCmd, char* txtPath){
     __pid_t pid = fork();
     char run[maxlen + 3] = "./";
     strcat(run,initCmd);
+
+
     if(pid == 0){
-        char* args[] = {run, NULL};
+        char* args[] = {run, txtPath, NULL};
         execvp(args[0], args);
         printf("\n");
-        
     } else {
         waitpid(pid, 0, 0);
-        kill(0, SIGINT); // kill the child
     }
     
-    return 0;
+    return;
 }
 
 void pipeHandler(char* cmdOne, char* cmdTwo){
@@ -110,35 +112,29 @@ void pipeHandler(char* cmdOne, char* cmdTwo){
 }
 
 int found(char* fpath){
-    if(access(fpath, F_OK) != errflag) return true;
+    if(access(fpath, R_OK) != errflag) return true;
     else return errflag;
 }
 
-int valCount(char** arr){
+int itemCount(char** arr){
     int i;
     for (i; i < maxinfo; i++) if((arr[i] == NULL) || (arr[i] == "\n") || (arr[i] == " ")) break;
     return i;
 }
 
-char** splitInput(char* input){
-    //printf("sent to split: %s\n", input);
-    char* tok = strtok(input, " ");
+char** splitInput(char* input) {
+    char* splitStr = strtok(input, " ");
     char **runInfo = malloc(maxinfo * (sizeof(char*)));
-    int cmds;
-    while(tok != NULL){
-        if(cmds > maxinfo) break;
-        if(tok == " \n") cmds++;
+    int cmdCount;
+    while(splitStr != NULL){
+        if(cmdCount > maxinfo) break;
+        if(splitStr == " \n") cmdCount++;
         else {
-            runInfo[cmds] = malloc(cmdlen * (sizeof(char)));
-            runInfo[cmds] = tok;
-            tok = strtok(NULL, " ");
-            cmds++;
+            runInfo[cmdCount] = malloc(cmdlen * (sizeof(char)));
+            runInfo[cmdCount] = splitStr;
+            splitStr = strtok(NULL, " ");
+            cmdCount++;
         }
     }
-
-    // printf("vals input: ");
-    // for(int i = 0; i < (cmds + 1); i++) printf("%s ", runInfo[i]);
-    // printf("%s", dn);
-    
     return runInfo;
 }
