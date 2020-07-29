@@ -39,13 +39,10 @@ void runCmd(char* initCmd, char* txtPath);
 
 int main(int argc, char** argv){
     char input[maxlen];
-    printf("Hello and welcome to my humble, simple shell. "
-           "\nIt can run 3 commands: my-cat, my-uniq & my-wc.\n"
-           "These commands are intended to run similarly to their linux "
-           "counterparts except\nwithout all of the fancy flags or man page entries.\n"
-           "Supply a text file name or path to any of the commands, or "
-           "if you're feeling wild,\nfeel free to do some piping "
-           "(as long as you're using the supplied commands.)\n");
+    printf("Hello and welcome to my humble, simple shell. It can run 3 commands: my-cat, my-uniq & my-wc.\n"
+           "These commands are intended to run similarly to their linux  counterparts except\nwithout all"
+           " of the fancy flags or man page entries.\nSupply a text file name or path to any of the commands, or "
+           "if you're feeling wild,\nfeel free to do some piping (as long as you're using the supplied commands.)\n");
     while(comp != 0){
         printf("%smyprompt> ", dn);
         fgets(input, maxlen, stdin);

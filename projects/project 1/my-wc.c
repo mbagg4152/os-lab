@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <ctype.h>
 
 void wc(char* txtPath);
 
@@ -11,9 +12,7 @@ int cap = 20;
 int main(int argc, char** argv){
     if(argc == 1) printf("no filename supplied as an argument.");
     else {
-        
         char* fname = argv[1];
-        printf("filename %s supplied\n", fname);
         wc(fname);
     }
     return 0;
@@ -26,18 +25,35 @@ void wc(char* txtPath){
         printf("either file %s does not exist or it cannot be accessed.\n", txtPath);
         return;
     } else {
-        int counter, words, lines;
-        char temp;
-
-        for (temp = getc(txt); temp != EOF; temp = getc(txt)){
-            
-            if(temp == '\n') lines++;
-            if((temp == ' ')) words++;
-            counter++;
-        }
+        int counter = 0, words = 0, lines = 0;
+        fseek(txt, 0, SEEK_END);
+        long txtSize = ftell(txt);
+        rewind(txt);
+        char* data = malloc(txtSize + 1);
+        fread(data, 1, txtSize, txt);
         fclose(txt);
+ 
+        if(isalnum(data[0])) words++;
+        for(counter; counter < txtSize; counter++){
+            char cur = data[counter];
+            //printf("%c", cur);
+            if(isspace(cur)){
+                if(counter < txtSize - 1){
+                    char next = data[counter + 1];
+                    if(isalnum(next)){
+                        if(cur == '\n'){
+                            words++;
+                            lines++;
+                        } else if((cur == ' ') || (cur == '\t')) words++;
+                    } else if (cur == '\n') lines++;
+                }
+            }
 
-        printf("\n  %d  %d  %d  %s\n", lines, words, counter, txtPath);
+        }
+
+
+
+        printf("\nFor file '%s': lines = %d, words = %d & bytes = %d\n\n", txtPath, lines, words, counter);
 
 
     }
