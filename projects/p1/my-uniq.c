@@ -73,7 +73,6 @@ void uniq(char *path) {
                 char *comp = splitData[j];
                 if (strcmp(comp, chosen) == 0) {
                     if (strcmp("\0", comp) != 0) {
-                        printf("%s%s\n", comp, chosen);
                         for (int k = j - 1; k < splitLen - 1; k++) splitData[k] = splitData[k + 1];
                     }
                 }
@@ -82,7 +81,6 @@ void uniq(char *path) {
         }
     }
 
-    printf("---------------------------------\n");
     for (int i = 0; i < splitLen; i++) printf("%s", splitData[i]);
     printf("\n");
 }
