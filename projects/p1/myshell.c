@@ -25,9 +25,9 @@ int comp = 1;
 
 // function signatures
 char *clean(char *str);
-char **splitInput(char *input);
+char **splitFile(char *input);
 int found(char *filePath);
-int itemCount(char **arr);
+int elemCount(char **arr);
 void handleInput(char *input);
 void pipeHandler(char *cmdOne, char *cmdTwo);
 void runCmd(char *initCmd, char *txtPath);
@@ -59,8 +59,8 @@ void handleInput(char *input) {
         if (space == NULL)
             printf("incorrect arg format or unrecognized command, try again\n"); // avoid segfault w/ strtok
         else { // need to handle as much as cmd file | cmd | cmd
-            char **split = splitInput(input);
-            int items = itemCount(split);
+            char **split = splitFile(input);
+            int items = elemCount(split);
 
             char *initCmd = clean(split[0]);
             if (found(initCmd) == errflag) printf("\ncan't find file %s\n", initCmd);
@@ -114,7 +114,7 @@ int found(char *filePath) {
 }
 
 
-int itemCount(char **arr) {
+int elemCount(char **arr) {
     int i = 0;
     for (; i < maxinfo; i++) {
         if ((arr[i] == NULL) || strcmp(arr[i], "\n") == 0 || strcmp(arr[i], " ") == 0) break;
@@ -123,7 +123,7 @@ int itemCount(char **arr) {
 }
 
 
-char **splitInput(char *input) {
+char **splitFile(char *input) {
     char *splitStr = strtok(input, " ");
     char **runInfo = malloc(maxinfo * (sizeof(char *)));
     int cmdCount = 0;

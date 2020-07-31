@@ -10,7 +10,7 @@ void wc(char *path);
 int cap = 20;
 
 int main(int argc, char **argv) {
-    if (argc == 1) printf("no filename supplied as an argument.");
+    if (argc == 1) printf("no filename supplied as an argument.\n");
     else {
         char *txtFileName = argv[1];
         wc(txtFileName);
