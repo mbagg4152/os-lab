@@ -3,17 +3,19 @@
 #include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <ctype.h>
 
-#define maxCharsPerLine 750
+#define maxChars 1024
 #define maxLines 400
 
-int absMax = maxCharsPerLine * maxLines;
+int absMax = maxChars * maxLines;
 
-char **splitFile(char *input);
-void uniq(char *path);
 char *fileToArray(char *path);
+char **splitFile(char *input);
 void db(char *msg);
 void dbi(int msg);
+void uniq(char *path);
+char **deleteThis(char **str, char *elem, int size);
 
 
 int main(int argc, char **argv) {
@@ -27,9 +29,9 @@ int main(int argc, char **argv) {
 
 char *fileToArray(char *path) {
     FILE *txt = fopen(path, "r");
-    if (txt == NULL) {
-        printf("file %s could not be found or is not accessible\n", path);
-        return "";
+    if (txt == NULL) {  // required err message & action on file access failure
+        printf("my-uniq: cannot open file '%s'\n", path);
+        exit(1);
     }
 
     int counter = 0;
@@ -59,67 +61,82 @@ void uniq(char *path) {
     char *fileData = fileToArray(path);
     //printf("%s\n", fileData);
     char **splitData = splitFile(fileData);
-    char **splitCopy = splitFile(fileData);
+
+
     int splitLen = 0;
     for (; splitLen < absMax; splitLen++) if (splitData[splitLen] == NULL) break;
-    int copyLen = splitLen - 1;
-    for (int i = 0; i < maxLines; i++) {
+    for (int i = 0; i < splitLen; i++) {
         char *chosen = splitData[i];
+        if (chosen == NULL) break;
+        for (int j = 0; j < splitLen; j++) {
+            if (i != j) {
+                char *comp = splitData[j];
+                if (strcmp(comp, chosen) == 0) {
+                    if (strcmp("\0", comp) != 0) {
+                        printf("%s%s\n", comp, chosen);
+                        for (int k = j - 1; k < splitLen - 1; k++) splitData[k] = splitData[k + 1];
+                    }
+                }
+            }
 
-//        db("1");
-//        for (int j = 0; j < maxLines; j++) {
-//            if (i == 0) j = 0;
-//            db("2");
-//            if (j != i) { // don't want to compare the same element to itself
-//                db("2.5");
-//                char *toComp = splitData[j];
-//                db("3");
-//                dbi(j);
-//                // db(toComp);
-//                db(chosen);
-//                if (strcmp(toComp, chosen) == 0) {
-//                    db("4");
-//                    splitLen = splitLen - 1;
-//                    j = j - 1;
-//                    db("5");
-//                    for (int k = i; k < splitLen; k++) {
-//                        db("6");
-//                        splitData[k] = splitData[k + 1];
-//                    }
-//                }
-//            }
-//        }
+        }
     }
 
+    printf("---------------------------------\n");
     for (int i = 0; i < splitLen; i++) printf("%s", splitData[i]);
+    printf("\n");
 }
 
 
-char **deleteThis(char **str, char *elem, int size) {
-    int count;
-    for (count = 0; count < size; count++) {
-        if (strcmp(elem, str[count]) == 0) break;
-    }
-
-    if (count < size) {
-        size = size - 1;
-        for (int i = 0; i < size; i++) str[i] = str[i + 1];
-    }
-    return str;
-
-}
+//char **deleteThis(char **str, char *elem, int size) {
+//    int count;
+//    for (count = 0; count < size; count++) {
+//        if (strcmp(elem, str[count]) == 0) break;
+//    }
+//    if (count < size) {
+//        size = size - 1;
+//        for (int i = 0; i < size; i++) {
+//            str[i] = str[i + 1];
+//        }
+//    }
+//    return str;
+//
+//}
 
 
 char **splitFile(char *input) {
-    char *splitStr = strtok(input, "\n");
-    char **lines = malloc(maxLines * (sizeof(char *)));
-    int lineCount = 0;
-    while (splitStr != NULL) {
-        if (lineCount > maxLines) break;
-        lines[lineCount] = malloc(maxCharsPerLine * (sizeof(char)));
-        lines[lineCount] = splitStr;
-        splitStr = strtok(NULL, "\n");
-        lineCount++;
+    char **lines = malloc((maxLines * (sizeof(char *))));
+    for (int i = 0; i < maxLines; i++) lines[i] = malloc(maxChars * (sizeof(char)));
+    int lineCount = 0, charCount = 0, totalChars = 0;
+
+    for (int i = 0; i < strlen(input) && input[i] != '\0'; i++) {
+        char tmp = input[i];
+        //printf("%c", tmp);
+        if (lineCount == maxLines) break;
+        if (charCount < maxChars) {
+            if (tmp == '\n') {
+                lines[lineCount][charCount] = tmp;
+                if (i < maxLines + 1) lines[lineCount][charCount + 1] = '\0';
+                lineCount++;
+                totalChars++;
+                charCount = 0;
+            } else {
+                if (i < maxLines + 1) lines[lineCount][charCount + 1] = '\0';
+                lines[lineCount][charCount] = tmp;
+                totalChars++;
+                charCount++;
+            }
+        } else lines[lineCount][charCount] = tmp;
     }
+
+    lines = realloc(lines, (totalChars * lineCount) * sizeof(char *));
+
+//    printf("%d %d\n", lineCount, totalChars);
+    //for (int i = 0; i < lineCount; i++) { printf("%s", lines[i]); }
+
+//    for (int i = 0; i < maxLines; i++) {
+//        char *tmp = lines[i];
+//        while (isspace((unsigned char) *tmp)) tmp++;
+//    }
     return lines;
 }

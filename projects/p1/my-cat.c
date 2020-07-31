@@ -4,26 +4,27 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-void cat(char* fname);
+void cat(char *fname);
 
-int main(int argc, char** argv) {
+
+int main(int argc, char **argv) {
     if (argc == 1) {
-        printf("no file name supplied\n");
+        printf("my-cat: a filename must be supplied\n");
         return 0;
-    }
-    else {
+    } else {
         cat(argv[1]);
         return 0;
     }
 }
 
-void cat(char* fname){
-    FILE* txt = fopen(fname, "r");
-    if(txt == NULL) {
-        printf("either file %s does not exist or it cannot be accessed.\n", fname);
-        return;
+
+void cat(char *fname) {
+    FILE *txt = fopen(fname, "r");
+    if (txt == NULL) { // required err message & action on file access failure
+        printf("my-cat: cannot open file '%s'.\n", fname);
+        exit(1);
     }
-    
+
     char temp;
     while (!feof(txt)) {
         fscanf(txt, "%c", &temp);

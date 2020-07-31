@@ -9,6 +9,7 @@ void wc(char *path);
 
 int cap = 20;
 
+
 int main(int argc, char **argv) {
     if (argc == 1) printf("no filename supplied as an argument.\n");
     else {
@@ -21,9 +22,9 @@ int main(int argc, char **argv) {
 
 void wc(char *path) {
     FILE *txt = fopen(path, "r");
-    if (txt == NULL) {
-        printf("either file %s does not exist or it cannot be accessed.\n", path);
-        return;
+    if (txt == NULL) {  // required err message & action on file access failure
+        printf("my-wc: cannot open file '%s'.\n", path);
+        exit(1);
     } else {
         int counter = 0, words = 0, lines = 0;
         fseek(txt, 0, SEEK_END);
