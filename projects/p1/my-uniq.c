@@ -12,11 +12,7 @@ int absMax = maxChars * maxLines;
 
 char *fileToArray(char *path);
 char **splitFile(char *input);
-void db(char *msg);
-void dbi(int msg);
 void uniq(char *path);
-char **deleteThis(char **str, char *elem, int size);
-
 
 int main(int argc, char **argv) {
     if (argc == 1) printf("no filename supplied as an argument.\n");
@@ -51,18 +47,9 @@ char *fileToArray(char *path) {
 }
 
 
-void db(char *msg) { printf("%s\n", msg); }
-
-
-void dbi(int msg) { printf("%d\n", msg); }
-
-
 void uniq(char *path) {
     char *fileData = fileToArray(path);
-    //printf("%s\n", fileData);
     char **splitData = splitFile(fileData);
-
-
     int splitLen = 0;
     for (; splitLen < absMax; splitLen++) if (splitData[splitLen] == NULL) break;
     for (int i = 0; i < splitLen; i++) {
@@ -72,7 +59,7 @@ void uniq(char *path) {
             if (i != j) {
                 char *comp = splitData[j];
                 if (strcmp(comp, chosen) == 0) {
-                    if (strcmp("\0", comp) != 0) {
+                    if (strcmp("\0", comp) != 0) { // there are excess null entries, if not excluded this messes with the array modifications
                         for (int k = j - 1; k < splitLen - 1; k++) splitData[k] = splitData[k + 1];
                     }
                 }
@@ -84,22 +71,6 @@ void uniq(char *path) {
     for (int i = 0; i < splitLen; i++) printf("%s", splitData[i]);
     printf("\n");
 }
-
-
-//char **deleteThis(char **str, char *elem, int size) {
-//    int count;
-//    for (count = 0; count < size; count++) {
-//        if (strcmp(elem, str[count]) == 0) break;
-//    }
-//    if (count < size) {
-//        size = size - 1;
-//        for (int i = 0; i < size; i++) {
-//            str[i] = str[i + 1];
-//        }
-//    }
-//    return str;
-//
-//}
 
 
 char **splitFile(char *input) {
@@ -128,13 +99,5 @@ char **splitFile(char *input) {
     }
 
     lines = realloc(lines, (totalChars * lineCount) * sizeof(char *));
-
-//    printf("%d %d\n", lineCount, totalChars);
-    //for (int i = 0; i < lineCount; i++) { printf("%s", lines[i]); }
-
-//    for (int i = 0; i < maxLines; i++) {
-//        char *tmp = lines[i];
-//        while (isspace((unsigned char) *tmp)) tmp++;
-//    }
     return lines;
 }
