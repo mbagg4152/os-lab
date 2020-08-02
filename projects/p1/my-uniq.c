@@ -7,6 +7,7 @@
 
 #define maxChars 1024
 #define maxLines 400
+const char *tag = "my-uniq";
 
 int absMax = maxChars * maxLines;
 
@@ -14,8 +15,9 @@ char *fileToArray(char *path);
 char **splitFile(char *input);
 void uniq(char *path);
 
+
 int main(int argc, char **argv) {
-    if (argc == 1) printf("no filename supplied as an argument.\n");
+    if (argc == 1) printf("%s no filename supplied as an argument.\n", tag);
     else {
         uniq(argv[1]);
     }
@@ -26,7 +28,7 @@ int main(int argc, char **argv) {
 char *fileToArray(char *path) {
     FILE *txt = fopen(path, "r");
     if (txt == NULL) {  // required err message & action on file access failure
-        printf("my-uniq: cannot open file '%s'\n", path);
+        printf("%s cannot open file '%s'\n", tag, path);
         exit(1);
     }
 
@@ -59,7 +61,8 @@ void uniq(char *path) {
             if (i != j) {
                 char *comp = splitData[j];
                 if (strcmp(comp, chosen) == 0) {
-                    if (strcmp("\0", comp) != 0) { // there are excess null entries, if not excluded this messes with the array modifications
+                    if (strcmp("\0", comp) !=
+                        0) { // there are excess null entries, if not excluded this messes with the array modifications
                         for (int k = j - 1; k < splitLen - 1; k++) splitData[k] = splitData[k + 1];
                     }
                 }

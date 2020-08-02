@@ -4,12 +4,13 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+const char *tag = "my-cat:";
 void cat(char *fname);
 
 
 int main(int argc, char **argv) {
     if (argc == 1) {
-        printf("my-cat: a filename must be supplied\n");
+        printf("%s a filename must be supplied\n", tag);
         return 0;
     } else {
         cat(argv[1]);
@@ -21,14 +22,14 @@ int main(int argc, char **argv) {
 void cat(char *fname) {
     FILE *txt = fopen(fname, "r");
     if (txt == NULL) { // required err message & action on file access failure
-        printf("my-cat: cannot open file '%s'.\n", fname);
+        printf("%s cannot open file '%s'.\n", tag, fname);
         exit(1);
     }
 
     char temp;
     while (!feof(txt)) {
         fscanf(txt, "%c", &temp);
-        printf("%c", temp);
+        fputc(temp, stdout);
     }
     printf("\n");
 }
