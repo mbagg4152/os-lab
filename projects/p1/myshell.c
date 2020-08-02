@@ -38,6 +38,8 @@
 // tags used when outputting messages to stdout
 #define DP_TAG  "doPipe:"
 #define HI_TAG  "handleInput:"
+#define PO_TAG "pipeOnce:"
+#define PT_TAG "pipeTwice:"
 #define RC_TAG  "runCmd:"
 #define TAG  "myshell: "
 
@@ -50,6 +52,8 @@ void doPipe(char **cmdArgs, int size);
 void handleInput(char *input);
 void pipeHandler(char *cmdArgs[], int argCount);
 void runCmd(char *initCmd, char *txtPath);
+void pipeOnce(char **fArgs, char **sArgs);
+void pipeTwice(char **fArgs, char **sArgs, char **tArgs);
 
 
 int main(int argc, char **argv) {
@@ -104,6 +108,7 @@ void doPipe(char **cmdArgs, int size) {
     char *init = cleanString(cmdArgs[0]), *path = cleanString(cmdArgs[1]);
     char *p1 = cleanString(cmdArgs[2]), *secCmd = cleanString(cmdArgs[3]);
     char *fArgs[] = {init, path, NULL}, *sArgs[] = {secCmd, NULL};
+
     if (strcmp(p1, P_STR) != 0) {
         printf("%s%s expected a pipe but got '%s'\n", TAG, DP_TAG, p1);
         return;
@@ -112,60 +117,12 @@ void doPipe(char **cmdArgs, int size) {
         printf("\n%s%s can't find file '%s'\n", TAG, DP_TAG, secCmd);
         return;
     }
-
     if (size == SINGLE_PIPE) {
-        // idea: fork & have child run the cmd 1 (writer) -> direct stdout
-        // to write end -> close read end -> run cmd 1.
-        // next: fork & have child run cmd 2 (reader) -> direct stdin
-        // to read end -> close write end -> run cmd 2 which will be
-        // able to look for data in stdin
-        int desc[2];
-        pipe(desc);
-        pid_t writer, reader;
-        int stat = pipe(desc);
-        if (stat == ERR) {
-            printf("%s%s error while piping\n", TAG, DP_TAG);
-        }
-        writer = fork();
-        if (writer < CHILD) {
-            printf("%s%s problem while making fork for writer process\n", TAG, DP_TAG);
-        } else if (writer == CHILD) {
-            close(desc[READ]);
-            int dStat = dup2(desc[WRITE], WRITE);
-            if (dStat == ERR) {
-                printf("%s%s dup2 failed on redirecting output\n", TAG, DP_TAG);
-            }
-            execv(fArgs[0], fArgs);
-        } else {
-            reader = fork();
-            if (reader < CHILD) printf("%s%s problem while making fork for reader process\n", TAG, DP_TAG);
-            else if (reader == CHILD) {
-                sleep(1);
-                close(desc[WRITE]);
-                int rStat = dup2(desc[READ], READ);
-                if (rStat == ERR) printf("%s%s dup2 failed on redirecting input\n", TAG, DP_TAG);
-                execv(sArgs[0], sArgs);
-            } else {
-                close(desc[WRITE]);
-                close(desc[READ]);
-
-                sleep(2);
-                kill(writer, SIGUSR1);
-                kill(reader, SIGUSR1);
-                wait(NULL);
-            }
-        }
-
+        pipeOnce(fArgs, sArgs);
     } else if (size == DOUBLE_PIPE) {
-        // idea: fork & have child run the cmd 1  -> direct stdout
-        // to write end -> close read end -> run cmd 1.
-        // next: fork & have child run cmd 2 -> direct stdin
-        // to read end -> direct stdout to write end -> run cmd 2.
-        // next: fork & have child run cmd 3 -> direct stdin
-        // to read end -> close write end -> run cmd 3
-        pid_t writer, middleMan, reader;
         char *p2 = cleanString(cmdArgs[4]), *thirdCmd = cleanString(cmdArgs[5]);
         char *tArgs[] = {thirdCmd, NULL};
+
         if (strcmp(p2, P_STR) != 0) {
             printf("%s%s expected a pipe but got '%s'\n", TAG, DP_TAG, p2);
             return;
@@ -174,11 +131,79 @@ void doPipe(char **cmdArgs, int size) {
             printf("\n%s%s can't find file %s\n", TAG, DP_TAG, thirdCmd);
             return;
         }
+        pipeTwice(fArgs, sArgs, tArgs);
 
     } else {
         printf("%s%s encountered issue, hit last else.\n", TAG, DP_TAG);
     }
+}
 
+
+void pipeOnce(char **fArgs, char **sArgs) {
+    // idea: fork & have child run the cmd 1 (writer) -> direct stdout
+    // to write end -> close read end -> run cmd 1.
+    // next: fork & have child run cmd 2 (reader) -> direct stdin
+    // to read end -> close write end -> run cmd 2 which will be
+    // able to look for data in stdin
+    int desc[2];
+    pipe(desc);
+    pid_t writer, reader;
+    int stat = pipe(desc);
+    if (stat == ERR) {
+        printf("%s%s error while piping\n", TAG, DP_TAG);
+    }
+    writer = fork();
+    if (writer < CHILD) {
+        printf("%s%s problem while making fork for writer process\n", TAG, DP_TAG);
+    } else if (writer == CHILD) {
+        close(desc[READ]);
+        int dStat = dup2(desc[WRITE], WRITE);
+        if (dStat == ERR) {
+            printf("%s%s dup2 failed on redirecting output\n", TAG, DP_TAG);
+        }
+        execv(fArgs[0], fArgs);
+    } else {
+        reader = fork();
+        if (reader < CHILD) printf("%s%s problem while making fork for reader process\n", TAG, DP_TAG);
+        else if (reader == CHILD) {
+            sleep(1);
+            close(desc[WRITE]);
+            int rStat = dup2(desc[READ], READ);
+            if (rStat == ERR) printf("%s%s dup2 failed on redirecting input\n", TAG, DP_TAG);
+            execv(sArgs[0], sArgs);
+        } else {
+            close(desc[WRITE]);
+            close(desc[READ]);
+
+            sleep(2);
+            kill(writer, SIGUSR1);
+            kill(reader, SIGUSR1);
+            wait(NULL);
+        }
+    }
+
+}
+
+
+void pipeTwice(char **fArgs, char **sArgs, char **tArgs) {
+    // idea: fork & have child run the cmd 1  -> direct stdout
+    // to write end -> close read end -> run cmd 1.
+    // next: fork & have child run cmd 2 -> direct stdin
+    // to read end -> direct stdout to write end -> run cmd 2.
+    // next: fork & have child run cmd 3 -> direct stdin
+    // to read end -> close write end -> run cmd 3
+    int d1[2], d2[2];
+    pid_t writer, middleMan, reader;
+
+    int stat = pipe(d1);
+    if (stat == ERR) {
+        printf("%s%s error while piping\n", TAG, DP_TAG);
+    }
+    writer = fork();
+    if (writer < CHILD) {
+        printf("%s%s problem while making fork for writer process\n", TAG, DP_TAG);
+
+    }
 }
 
 
