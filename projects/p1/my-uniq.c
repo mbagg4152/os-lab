@@ -44,6 +44,7 @@ char *fileToArray(char *path) {
                 used++;
                 c = getchar();
             }
+            return data;
         } else {
             printf("%s There was no file name supplied & stdin is empty. Nothing to do here", TAG);
             exit(1);
@@ -85,8 +86,8 @@ void uniq(char *path) {
             if (i != j) {
                 char *comp = splitData[j];
                 if (strcmp(comp, chosen) == 0) {
-                    if (strcmp("\0", comp) !=
-                        0) { // there are excess null entries, if not excluded this messes with the array modifications
+                    // there are excess null entries, if not excluded this messes with the array modifications
+                    if (strcmp("\0", comp) != 0) {
                         for (int k = j - 1; k < splitLen - 1; k++) splitData[k] = splitData[k + 1];
                     }
                 }

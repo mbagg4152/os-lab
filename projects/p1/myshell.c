@@ -95,7 +95,10 @@ void handleInput(char *input) {
                     runCmd(initCmd, txtPath);
                 } else if (items == SINGLE_PIPE || items == DOUBLE_PIPE) {
                     doPipe(split, items);
-                } else printf("%s%s Incorrect number of args supplied\n", TAG, HI_TAG);
+                } else {
+                    printf("%s%s Incorrect number of args supplied. Supplied %d args:\n", TAG, HI_TAG, items);
+                    for (int i = 0; i < items; i++) printf("%s\n", split[i]);
+                }
 
             }
         }
@@ -138,6 +141,10 @@ void doPipe(char **cmdArgs, int size) {
     }
 }
 
+void pipeWrite(char *args[]) {
+
+}
+
 
 void pipeOnce(char **fArgs, char **sArgs) {
     // idea: fork & have child run the cmd 1 (writer) -> direct stdout
@@ -150,26 +157,26 @@ void pipeOnce(char **fArgs, char **sArgs) {
     pid_t writer, reader;
     int stat = pipe(desc);
     if (stat == ERR) {
-        printf("%s%s error while piping\n", TAG, DP_TAG);
+        printf("%s%s error while piping\n", TAG, PO_TAG);
     }
     writer = fork();
     if (writer < CHILD) {
-        printf("%s%s problem while making fork for writer process\n", TAG, DP_TAG);
+        printf("%s%s problem while making fork for writer process\n", TAG, PO_TAG);
     } else if (writer == CHILD) {
         close(desc[READ]);
         int dStat = dup2(desc[WRITE], WRITE);
         if (dStat == ERR) {
-            printf("%s%s dup2 failed on redirecting output\n", TAG, DP_TAG);
+            printf("%s%s dup2 failed on redirecting output\n", TAG, PO_TAG);
         }
         execv(fArgs[0], fArgs);
     } else {
         reader = fork();
-        if (reader < CHILD) printf("%s%s problem while making fork for reader process\n", TAG, DP_TAG);
+        if (reader < CHILD) printf("%s%s problem while making fork for reader process\n", TAG, PO_TAG);
         else if (reader == CHILD) {
             sleep(1);
             close(desc[WRITE]);
             int rStat = dup2(desc[READ], READ);
-            if (rStat == ERR) printf("%s%s dup2 failed on redirecting input\n", TAG, DP_TAG);
+            if (rStat == ERR) printf("%s%s dup2 failed on redirecting input\n", TAG, PO_TAG);
             execv(sArgs[0], sArgs);
         } else {
             close(desc[WRITE]);
@@ -189,23 +196,11 @@ void pipeTwice(char **fArgs, char **sArgs, char **tArgs) {
     // idea: fork & have child run the cmd 1  -> direct stdout
     // to write end -> close read end -> run cmd 1.
     // next: fork & have child run cmd 2 -> direct stdin
-    // to read end -> direct stdout to write end -> run cmd 2.
+    // to read end  from pipe 1 -> direct stdout to write end of pipe 2-> run cmd 2.
     // next: fork & have child run cmd 3 -> direct stdin
     // to read end -> close write end -> run cmd 3
-    int d1[2], d2[2];
-    pid_t writer, middleMan, reader;
 
-    int stat = pipe(d1);
-    if (stat == ERR) {
-        printf("%s%s error while piping\n", TAG, DP_TAG);
-    }
-    writer = fork();
-    if (writer < CHILD) {
-        printf("%s%s problem while making fork for writer process\n", TAG, DP_TAG);
-
-    }
 }
-
 
 void runCmd(char *initCmd, char *txtPath) {
     __pid_t forked = fork();
@@ -238,7 +233,7 @@ int foundFile(char *filePath) {
 
 int elemCount(char **arr) {
     int i = 0;
-    for (; i < MAX_ARG_LEN; i++) {
+    for (; i < MAX_ARG_LEN + 1; i++) {
         if ((arr[i] == NULL) || strcmp(arr[i], "\n") == 0 || strcmp(arr[i], " ") == 0) break;
     }
     return i;
@@ -256,6 +251,7 @@ char **splitFile(char *input) {
         splitStr = strtok(NULL, " ");
         cmdCount++;
     }
+    //printf("cmdCount: %d\n", cmdCount);
     return runInfo;
 }
 
