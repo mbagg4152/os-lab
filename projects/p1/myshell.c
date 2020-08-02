@@ -17,6 +17,8 @@
 #define maxArgs 5
 #define maxLen 70
 #define true 1
+#define singleArgCount 4
+#define doubleArgCount 5
 
 const char *pipeFlag = "|";
 const char *quit = "quit\n";
@@ -29,7 +31,7 @@ char **splitFile(char *input);
 int foundFile(char *filePath);
 int elemCount(char **arr);
 void handleInput(char *input);
-void pipeHandler(char *cmdOne, char *cmdTwo);
+void pipeHandler(char *cmdArgs[], int argCount);
 void runCmd(char *initCmd, char *txtPath);
 
 
@@ -63,41 +65,46 @@ void handleInput(char *input) {
             int items = elemCount(split);
 
             char *initCmd = cleanString(split[0]);
-            if (foundFile(initCmd) == errFlag) printf("\ncan't find file %s\n", initCmd);
-            char *txtPath = cleanString(split[1]);
+            if (foundFile(initCmd) == errFlag) printf("\nahhhh can't find file %s\n", initCmd);
+            else {
+                char *txtPath = cleanString(split[1]);
 
-            if (items == 2) { // basic command
-                runCmd(initCmd, txtPath);
-            } else if ((items == 4) || (items == 6)) { // single pipe
-                char *pipe1 = cleanString(split[2]);
-                char *cmd2 = cleanString(split[3]);
-                if (strcmp(pipe1, pipeFlag) == 0) {
+                if (items == 2) { // basic command
                     runCmd(initCmd, txtPath);
-                } else {
-                    printf("myshell: expected a pipe but got '%s'\n", pipe1);
-                }
+                } else if ((items == 3) || (items == 5)) printf("wrong number of items supplied\n");
+                else { // single pipe
+                    char *firstPipe = cleanString(split[2]), *secondCmd = cleanString(split[3]);
+                    char *singlePipeArgs[] = {initCmd, txtPath, secondCmd, NULL};
 
-                if (items == 6) {
-                    char *pipe2 = cleanString(split[4]);
-                    if (strcmp(pipe2, pipeFlag) == 0) {
-                        runCmd(initCmd, txtPath);
+                    if (items == 6) {
+                        char *secondPipe = cleanString(split[4]), *thirdCmd = cleanString(split[5]);
+                        char *doublePipeArgs[] = {initCmd, txtPath, secondCmd, thirdCmd, NULL};
 
-                    } else {
-                        printf("myshell: expected a pipe but got '%s'\n", pipe2);
+                        if (strcmp(secondPipe, pipeFlag) != 0)
+                            printf("myshell: expected a pipe but got '%s'\n", secondPipe);
+                        else {
+                            if (foundFile(thirdCmd) == errFlag) printf("\ncan't find file %s\n", thirdCmd);
+                            else runCmd(initCmd, txtPath);
+                        }
                     }
 
-                    char *cmd3 = cleanString(split[5]);
+                    if (strcmp(firstPipe, pipeFlag) != 0)
+                        printf("myshell: expected a pipe but got '%s'\n", firstPipe);
+                    else {
+                        if (foundFile(secondCmd) == errFlag) printf("\ncan't find file %s\n", secondCmd);
+                        //else runCmd(initCmd, txtPath);
+                    }
+                    if (items == 4) {
+                        pipeHandler(singlePipeArgs, singleArgCount);
+                    }
 
                 }
+                // incorrect no. of items supplied
 
-            } else if ((items == 3) || (items == 5)) { // incorrect no. of items supplied
-                printf("wrong number of items supplied\n");
             }
         }
-    } else {
-        printf("invalid input\n");
-        return;
     }
+
 }
 
 
@@ -110,12 +117,31 @@ void runCmd(char *initCmd, char *txtPath) {
         char *args[] = {run, txtPath, NULL};
         execvp(args[0], args);
         printf("\n");
+    } else if (forked < 0) {
+        printf("myshell: encountered error while forking");
     } else waitpid(forked, 0, 0);
 }
 
 
-void pipeHandler(char *cmdOne, char *cmdTwo) {
+void pipeHandler(char *cmdArgs[], int argCount) {
+    int singlePids[2];
+    int doublePids[3];
+    int first[2]; // store ends of pipe from cmd1 -> cmd2
+    int second[2]; // store ends of pipe from cmd2 -> cmd3
+    char *firstArgs[] = {cmdArgs[0], cmdArgs[1], NULL};
+    char *secondArgs[] = {cmdArgs[2], NULL};
+    if (argCount == singleArgCount) {
+        int one[2];
+        int two[2];
+        pid_t pid1, pid2;
+        
 
+
+    } else if (argCount == doubleArgCount) {
+        printf("bleh\n");
+    } else {
+        printf("blah\n");
+    }
 }
 
 
