@@ -11,50 +11,62 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define CMD_LEN 20
-#define ERR_FLG -1
-#define false 0
-#define MAX_ARGS 5
-#define MAX_LEN 70
-#define true 1
-#define SINGLE_COUNT 4
-#define DOUBLE_COUNT 5
-#define READ 0 // == STDIN_FILENO
-#define WRITE 1 // == STDOUT_FILENO
+// arbitrary length limits
+#define CMD_LEN 48          // size limit per command
+#define MAX_ARG_LEN 5       // max length of array holding args
+#define MAX_INP_LEN 240     // max length for input
 
-const char *pipeFlag = "|";
-const char *quit = "quit\n";
-const char *tag = "myshell:";
+// defs to determine how to handle pipes
+#define NO_PIPE 2           // number of expected args for simple command
+#define SINGLE_PIPE 4       // number of args expected for single piping
+#define DOUBLE_PIPE 6       // number of args expected for double piping
 
-int comp = 1;
+// defs used in implementing pipe functionality
+#define CHILD 0             // 0 is pid of child process
+#define READ 0              // == STDIN_FILENO
+#define WRITE 1             // == STDOUT_FILENO
+
+// defs for use in string matching
+#define P_STR "|"           // used to string match each input entry
+#define QUIT  "quit\n"      // used to string match for closing program
+
+// sig/bool
+#define ERR -1              // err code
+#define FALSE 0
+#define TRUE 1
+
+// tags used when outputting messages to stdout
+#define DP_TAG  "doPipe:"
+#define HI_TAG  "handleInput:"
+#define RC_TAG  "runCmd:"
+#define TAG  "myshell: "
 
 // function signatures
-char *cleanString(char *str);
 char **splitFile(char *input);
-int foundFile(char *filePath);
+char *cleanString(char *str);
 int elemCount(char **arr);
+int foundFile(char *filePath);
+void doPipe(char **cmdArgs, int size);
 void handleInput(char *input);
 void pipeHandler(char *cmdArgs[], int argCount);
 void runCmd(char *initCmd, char *txtPath);
 
 
 int main(int argc, char **argv) {
-    char input[MAX_LEN];
-    printf("Hello and welcome to my humble, simple shell. It can run 3 commands: my-cat, my-uniq & my-wc.\n"
-           "These commands are intended to run similarly to their linux  counterparts except without all "
-           "of the fancy flags or man page entries.\nSupply a text file name or path to any of the commands, or "
-           "if you're feeling wild, feel free to do some piping (as long as you're using the supplied commands.)\n");
+    char input[MAX_INP_LEN];
+    printf("myshell can run 3 commands: my-cat, my-uniq & my-wc. They are designed to have the same base \n"
+           "functionality as their unix counterparts. You may also pipe these commands but the shell\n"
+           "will not accept more than two pipes.\n");
+    int comp = 1;
     while (comp != 0) {
-        printf("\n\nmyprompt> ");
-        fgets(input, MAX_LEN, stdin);
-        comp = strcmp(quit, input);
+        printf("\nmyprompt> ");
+        fgets(input, MAX_INP_LEN, stdin);
+        comp = strcmp(QUIT, input);
         if (comp == 0) {
-            printf("\n\nSee ya!\n\n");
-            kill(0, SIGINT);
-            return 0;
+            printf("\nSee ya!\n");
+            exit(0);
         } else handleInput(input);
     }
-    return 0;
 }
 
 
@@ -62,49 +74,109 @@ void handleInput(char *input) {
     if (strcmp(input, "\n") != 0 && (input != NULL)) { // make sure theres some input
         char *space = strchr(input, ' ');
         if (space == NULL)
-            printf("%s incorrect arg format or unrecognized command, try again\n", tag); // avoid segfault w/ strtok
-        else { // need to handle as much as cmd file | cmd | cmd
+            printf("%s%s incorrect arg format or unrecognized command, try again\n", TAG, HI_TAG);
+
+        else {
             char **split = splitFile(input);
             int items = elemCount(split);
-
             char *initCmd = cleanString(split[0]);
-            if (foundFile(initCmd) == ERR_FLG) printf("\n%s oh no can't find file %s\n", tag, initCmd);
+            if (foundFile(initCmd) == ERR) printf("\n%s%s oh no can't find file %s\n", TAG, HI_TAG, initCmd);
             else {
                 char *txtPath = cleanString(split[1]);
 
-                if (items == 2) { // basic command
+                // NO_PIPE = 2 args ==> cmd1 & path
+                // SINGLE_PIPE = 4 args ==> cmd1, path, pipe & cmd2
+                // DOUBLE_PIPE = 6 args ==> cmd1, path, pipe1, cmd2, pipe2 & cmd3
+                if (items == NO_PIPE) { // basic command
                     runCmd(initCmd, txtPath);
-                } else if ((items == 3) || (items == 5)) printf("%s wrong number of items supplied\n", tag);
-                else { // single pipe
-                    char *firstPipe = cleanString(split[2]), *secondCmd = cleanString(split[3]);
-                    char *singlePipeArgs[] = {initCmd, txtPath, secondCmd, NULL};
-
-                    if (items == 6) {
-                        char *secondPipe = cleanString(split[4]), *thirdCmd = cleanString(split[5]);
-                        char *doublePipeArgs[] = {initCmd, txtPath, secondCmd, thirdCmd, NULL};
-
-                        if (strcmp(secondPipe, pipeFlag) != 0)
-                            printf("%s expected a pipe but got '%s'\n", tag, secondPipe);
-                        else {
-                            if (foundFile(thirdCmd) == ERR_FLG) printf("\n%s can't find file %s\n", tag, thirdCmd);
-                            else pipeHandler(doublePipeArgs, DOUBLE_COUNT);
-                        }
-                    }
-
-                    if (strcmp(firstPipe, pipeFlag) != 0)
-                        printf("%s expected a pipe but got '%s'\n", tag, firstPipe);
-                    else {
-                        if (foundFile(secondCmd) == ERR_FLG) printf("\n%s can't find file %s\n", tag, secondCmd);
-                        //else runCmd(initCmd, txtPath);
-                    }
-                    if (items == 4) {
-                        pipeHandler(singlePipeArgs, SINGLE_COUNT);
-                    }
-
-                }
+                } else if (items == SINGLE_PIPE || items == DOUBLE_PIPE) {
+                    doPipe(split, items);
+                } else printf("%s%s Incorrect number of args supplied\n", TAG, HI_TAG);
 
             }
         }
+    }
+
+}
+
+
+void doPipe(char **cmdArgs, int size) {
+    char *init = cleanString(cmdArgs[0]), *path = cleanString(cmdArgs[1]);
+    char *p1 = cleanString(cmdArgs[2]), *secCmd = cleanString(cmdArgs[3]);
+    char *fArgs[] = {init, path, NULL}, *sArgs[] = {secCmd, NULL};
+    if (strcmp(p1, P_STR) != 0) {
+        printf("%s%s expected a pipe but got '%s'\n", TAG, DP_TAG, p1);
+        return;
+    }
+    if (foundFile(secCmd) == ERR) {
+        printf("\n%s%s can't find file '%s'\n", TAG, DP_TAG, secCmd);
+        return;
+    }
+
+    if (size == SINGLE_PIPE) {
+        // idea: fork & have child run the cmd 1 (writer) -> direct stdout
+        // to write end -> close read end -> run cmd 1.
+        // next: fork & have child run cmd 2 (reader) -> direct stdin
+        // to read end -> close write end -> run cmd 2 which will be
+        // able to look for data in stdin
+        int desc[2];
+        pipe(desc);
+        pid_t writer, reader;
+        int stat = pipe(desc);
+        if (stat == ERR) {
+            printf("%s%s error while piping\n", TAG, DP_TAG);
+        }
+        writer = fork();
+        if (writer < CHILD) {
+            printf("%s%s problem while making fork for writer process\n", TAG, DP_TAG);
+        } else if (writer == CHILD) {
+            close(desc[READ]);
+            int dStat = dup2(desc[WRITE], WRITE);
+            if (dStat == ERR) {
+                printf("%s%s dup2 failed on redirecting output\n", TAG, DP_TAG);
+            }
+            execv(fArgs[0], fArgs);
+        } else {
+            reader = fork();
+            if (reader < CHILD) printf("%s%s problem while making fork for reader process\n", TAG, DP_TAG);
+            else if (reader == CHILD) {
+                sleep(1);
+                close(desc[WRITE]);
+                int rStat = dup2(desc[READ], READ);
+                if (rStat == ERR) printf("%s%s dup2 failed on redirecting input\n", TAG, DP_TAG);
+                execv(sArgs[0], sArgs);
+            } else {
+                close(desc[WRITE]);
+                close(desc[READ]);
+
+                sleep(2);
+                kill(writer, SIGUSR1);
+                kill(reader, SIGUSR1);
+                wait(NULL);
+            }
+        }
+
+    } else if (size == DOUBLE_PIPE) {
+        // idea: fork & have child run the cmd 1  -> direct stdout
+        // to write end -> close read end -> run cmd 1.
+        // next: fork & have child run cmd 2 -> direct stdin
+        // to read end -> direct stdout to write end -> run cmd 2.
+        // next: fork & have child run cmd 3 -> direct stdin
+        // to read end -> close write end -> run cmd 3
+        pid_t writer, middleMan, reader;
+        char *p2 = cleanString(cmdArgs[4]), *thirdCmd = cleanString(cmdArgs[5]);
+        char *tArgs[] = {thirdCmd, NULL};
+        if (strcmp(p2, P_STR) != 0) {
+            printf("%s%s expected a pipe but got '%s'\n", TAG, DP_TAG, p2);
+            return;
+        }
+        if (foundFile(thirdCmd) == ERR) {
+            printf("\n%s%s can't find file %s\n", TAG, DP_TAG, thirdCmd);
+            return;
+        }
+
+    } else {
+        printf("%s%s encountered issue, hit last else.\n", TAG, DP_TAG);
     }
 
 }
@@ -112,7 +184,7 @@ void handleInput(char *input) {
 
 void runCmd(char *initCmd, char *txtPath) {
     __pid_t forked = fork();
-    char run[MAX_LEN + 3] = "./";
+    char run[MAX_INP_LEN + 3] = "./";
     strcat(run, initCmd);
 
     if (forked == 0) {
@@ -120,71 +192,28 @@ void runCmd(char *initCmd, char *txtPath) {
         execvp(args[0], args);
         printf("\n");
     } else if (forked < 0) {
-        printf("%s encountered error while forking", tag);
-    } else waitpid(forked, 0, 0);
-}
-
-
-void pipeHandler(char *cmdArgs[], int argCount) {
-    int singlePids[2];
-    int doublePids[3];
-    int first[2]; // store ends of pipe from cmd1 -> cmd2
-    int second[2]; // store ends of pipe from cmd2 -> cmd3
-    char *firstArgs[] = {cmdArgs[0], cmdArgs[1], NULL};
-    char *secondArgs[] = {cmdArgs[2], NULL};
-    pid_t fPid = -1;
-    pid_t sPid = -1;
-    if (argCount == SINGLE_COUNT) {
-        // whatever is written from descriptor[1] is read from descriptor[0]
-        int desc[2];
-
-        int piped = pipe(desc);
-        if (piped < 0) printf("%s error making pipe\n", tag);
-        else {
-            int forked = fork();
-            int status;
-
-            // idea: redirect stdout to the pipe & close read end in the parent, then execute first in parent
-            // replace stdin with input from pipe, which contains output from first process. close write end of pipe since it will not be used then run second command
-            if (forked < 0) printf("%s err forking\n", tag);
-
-            if (forked == 0) {
-                close(desc[READ]);
-                dup2(desc[WRITE], WRITE);
-                execv(firstArgs[0], firstArgs);
-            }
-            close(desc[WRITE]);
-            waitpid(-1, &status, 0);
-
-            int forked2 = fork();
-            if (forked2 == 0) {
-                close(desc[WRITE]);
-                dup2(desc[READ], READ);
-                execv(secondArgs[0], secondArgs);
-            }
-
-            close(desc[READ]);
-
-            waitpid(-1, &status, 0);
-        }
-
-    } else if (argCount == DOUBLE_COUNT) {
-        printf("%s bleh\n", tag);
+        printf("%s%s encountered error while forking", TAG, RC_TAG);
     } else {
-        printf("%s blah\n", tag);
+        waitpid(forked, 0, 0);
+        kill(forked, SIGUSR1);
     }
 }
 
 
+void pipeHandler(char *cmdArgs[], int argCount) {
+
+}
+
+
 int foundFile(char *filePath) {
-    if (access(filePath, R_OK) != ERR_FLG) return true;
-    else return ERR_FLG;
+    if (access(filePath, R_OK) != ERR) return TRUE;
+    else return ERR;
 }
 
 
 int elemCount(char **arr) {
     int i = 0;
-    for (; i < MAX_ARGS; i++) {
+    for (; i < MAX_ARG_LEN; i++) {
         if ((arr[i] == NULL) || strcmp(arr[i], "\n") == 0 || strcmp(arr[i], " ") == 0) break;
     }
     return i;
@@ -193,10 +222,10 @@ int elemCount(char **arr) {
 
 char **splitFile(char *input) {
     char *splitStr = strtok(input, " ");
-    char **runInfo = malloc(MAX_ARGS * (sizeof(char *)));
+    char **runInfo = malloc(MAX_ARG_LEN * (sizeof(char *)));
     int cmdCount = 0;
     while (splitStr != NULL) {
-        if (cmdCount > MAX_ARGS) break;
+        if (cmdCount > MAX_ARG_LEN) break;
         runInfo[cmdCount] = malloc(CMD_LEN * (sizeof(char)));
         runInfo[cmdCount] = splitStr;
         splitStr = strtok(NULL, " ");

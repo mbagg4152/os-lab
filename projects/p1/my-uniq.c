@@ -5,11 +5,12 @@
 #include <unistd.h>
 #include <ctype.h>
 
-#define maxChars 1024
-#define maxLines 400
-const char *tag = "my-uniq";
+#define MAX_CHARS 1024
+#define MAX_LINES 400
+#define TOTAL_MAX  MAX_CHARS * MAX_LINES
 
-int absMax = maxChars * maxLines;
+#define NO_PATH "#%?no#%?path#%?"
+#define TAG  "my-uniq"
 
 char *fileToArray(char *path);
 char **splitFile(char *input);
@@ -17,34 +18,57 @@ void uniq(char *path);
 
 
 int main(int argc, char **argv) {
-    if (argc == 1) printf("%s no filename supplied as an argument.\n", tag);
-    else {
-        uniq(argv[1]);
-    }
+    char *txtFileName;
+    if (argc == 1) txtFileName = NO_PATH;
+    else txtFileName = argv[1];
+    uniq(txtFileName);
     return 0;
 }
 
 
 char *fileToArray(char *path) {
-    FILE *txt = fopen(path, "r");
-    if (txt == NULL) {  // required err message & action on file access failure
-        printf("%s cannot open file '%s'\n", tag, path);
-        exit(1);
-    }
-
+    char *data;
     int counter = 0;
     int cap = 50;
-    char *data = (char *) malloc(sizeof(char) * cap);
-    while ((!feof(txt)) && (counter < absMax)) {
-        char tmp;
-        fscanf(txt, "%c", &tmp);
-        if (counter == cap) {
-            cap = cap * 2;
-            data = (char *) realloc(data, (sizeof(char) * cap));
+    if (strcmp(path, NO_PATH) == 0) {
+        if (stdin != NULL) {
+            int used = 0;
+            data = (char *) malloc(sizeof(char) * cap);
+            int c = getchar();
+            while (c != EOF) {
+                if (used == cap) {
+                    cap *= 2;
+                    data = realloc(data, (sizeof(char) * cap));
+                }
+                data[used] = (char) c;
+                used++;
+                c = getchar();
+            }
+        } else {
+            printf("%s There was no file name supplied & stdin is empty. Nothing to do here", TAG);
+            exit(1);
         }
-        data[counter] = tmp;
-        counter++;
+
+    } else {
+        FILE *txt = fopen(path, "r");
+        if (txt == NULL) {  // required err message & action on file access failure
+            printf("%s cannot open file '%s'\n", TAG, path);
+            exit(1);
+        }
+
+        data = (char *) malloc(sizeof(char) * cap);
+        while ((!feof(txt)) && (counter < TOTAL_MAX)) {
+            char tmp;
+            fscanf(txt, "%c", &tmp);
+            if (counter == cap) {
+                cap = cap * 2;
+                data = (char *) realloc(data, (sizeof(char) * cap));
+            }
+            data[counter] = tmp;
+            counter++;
+        }
     }
+
     return data;
 }
 
@@ -53,7 +77,7 @@ void uniq(char *path) {
     char *fileData = fileToArray(path);
     char **splitData = splitFile(fileData);
     int splitLen = 0;
-    for (; splitLen < absMax; splitLen++) if (splitData[splitLen] == NULL) break;
+    for (; splitLen < TOTAL_MAX; splitLen++) if (splitData[splitLen] == NULL) break;
     for (int i = 0; i < splitLen; i++) {
         char *chosen = splitData[i];
         if (chosen == NULL) break;
@@ -77,23 +101,23 @@ void uniq(char *path) {
 
 
 char **splitFile(char *input) {
-    char **lines = malloc((maxLines * (sizeof(char *))));
-    for (int i = 0; i < maxLines; i++) lines[i] = malloc(maxChars * (sizeof(char)));
+    char **lines = malloc((MAX_LINES * (sizeof(char *))));
+    for (int i = 0; i < MAX_LINES; i++) lines[i] = malloc(MAX_CHARS * (sizeof(char)));
     int lineCount = 0, charCount = 0, totalChars = 0;
 
     for (int i = 0; i < strlen(input) && input[i] != '\0'; i++) {
         char tmp = input[i];
         //printf("%c", tmp);
-        if (lineCount == maxLines) break;
-        if (charCount < maxChars) {
+        if (lineCount == MAX_LINES) break;
+        if (charCount < MAX_CHARS) {
             if (tmp == '\n') {
                 lines[lineCount][charCount] = tmp;
-                if (i < maxLines + 1) lines[lineCount][charCount + 1] = '\0';
+                if (i < MAX_LINES + 1) lines[lineCount][charCount + 1] = '\0';
                 lineCount++;
                 totalChars++;
                 charCount = 0;
             } else {
-                if (i < maxLines + 1) lines[lineCount][charCount + 1] = '\0';
+                if (i < MAX_LINES + 1) lines[lineCount][charCount + 1] = '\0';
                 lines[lineCount][charCount] = tmp;
                 totalChars++;
                 charCount++;

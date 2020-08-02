@@ -7,37 +7,54 @@
 
 void wc(char *path);
 
-int cap = 20;
-const char *tag = "my-wc:";
+#define NO_PATH "#%?no#%?path#%?"
+
+int cap = 512;
+const char *TAG = "my-wc:";
 
 
 int main(int argc, char **argv) {
-    if (argc == 1) {
-        printf("%s no filename supplied as an argument. trying stdin\n", tag);
-        char *txtFileName = STDIN_FILENO;
-        wc(txtFileName);
-    } else {
-        char *txtFileName = argv[1];
-        wc(txtFileName);
-    }
+    char *txtFileName;
+    if (argc == 1) txtFileName = NO_PATH;
+    else txtFileName = argv[1];
+
+    wc(txtFileName);
     return 0;
 }
 
 
 void wc(char *path) {
-    FILE *txt = fopen(path, "r");
-    if (txt == NULL) {  // required err message & action on file access failure
-        printf("%s cannot open file '%s'.\n", tag, path);
-        txt = stdin;
-        //exit(1);
-    }
+    char *data;
     int counter = 0, words = 0, lines = 0;
-    fseek(txt, 0, SEEK_END);
-    long txtSize = ftell(txt);
-    rewind(txt);
-    char *data = malloc(txtSize + 1);
-    fread(data, 1, txtSize, txt);
-    fclose(txt);
+    long txtSize;
+    if (strcmp(path, NO_PATH) == 0) {  // required err message & action on file access failure
+
+        int used = 0;
+        data = (char *) malloc(sizeof(char) * cap);
+        int c = getchar();
+        while (c != EOF) {
+            if (used == cap) {
+                cap *= 2;
+                data = realloc(data, (sizeof(char) * cap));
+            }
+            data[used] = (char) c;
+            used++;
+            c = getchar();
+        }
+        txtSize = used;
+        if (txtSize == 0) {
+            printf("%s There was no file name supplied & stdin is empty. Nothing to do here\n", TAG);
+            exit(1);
+        } else printf("%s Found some data in stdin, will use this for the wc operation.\n", TAG);
+    } else {
+        FILE *txt = fopen(path, "r");
+        fseek(txt, 0, SEEK_END);
+        txtSize = ftell(txt);
+        rewind(txt);
+        data = malloc(txtSize + 1);
+        fread(data, 1, txtSize, txt);
+        fclose(txt);
+    }
 
     if (isalnum(data[0])) words++;
     for (; counter < txtSize; counter++) {
@@ -55,13 +72,6 @@ void wc(char *path) {
         }
 
     }
-    printf("\n%s For file '%s': lines = %d, words = %d & bytes = %d\n\n", tag, path, lines, words, counter);
-//    char lineStr[10], wordStr[10], byteStr[12], out[100];
-//    char *str1 = " For file '", *str2 = "': lines = ", *str3 = ", words = ", *str4 = " & bytes = ", *str5 = "\n";
-//    sprintf(lineStr, "%d", lines);
-//    sprintf(wordStr, "%d", words);
-//    sprintf(byteStr, "%d", counter);
-//    sprintf(out, "%s%s%s%s%s%s%s%s%s%s", tag, str1, path, str2, lineStr, str3, wordStr, str4, byteStr, str5);
-//    for (int i = 0; i < strlen(out); i++) fputc(out[i], stdout);
+    printf("\n%s Lines = %d, words = %d & bytes = %d\n", TAG, lines, words, counter);
 
 }
