@@ -8,16 +8,14 @@
 void wc(char *path);
 
 #define NO_PATH "#%?no#%?path#%?"
-
+#define TAG  "my-wc:"
 int cap = 512;
-const char *TAG = "my-wc:";
 
 
 int main(int argc, char **argv) {
     char *txtFileName;
     if (argc == 1) txtFileName = NO_PATH;
     else txtFileName = argv[1];
-
     wc(txtFileName);
     return 0;
 }
@@ -45,13 +43,13 @@ void wc(char *path) {
         if (txtSize == 0) {
             printf("%s There was no file name supplied & stdin is empty. Nothing to do here\n", TAG);
             exit(1);
-        } else printf("%s Found some data in stdin, will use this for the wc operation.\n", TAG);
+        }
     } else {
         FILE *txt = fopen(path, "r");
         fseek(txt, 0, SEEK_END);
         txtSize = ftell(txt);
         rewind(txt);
-        data = malloc(txtSize + 1);
+        data = malloc(txtSize);
         fread(data, 1, txtSize, txt);
         fclose(txt);
     }
@@ -72,6 +70,7 @@ void wc(char *path) {
         }
 
     }
-    printf("\n%s Lines = %d, words = %d & bytes = %d\n", TAG, lines, words, counter);
+
+    fprintf(stdout, "\n%s Lines = %d & words = %d\n", TAG, lines, words);
 
 }

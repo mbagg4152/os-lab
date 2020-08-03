@@ -54,6 +54,10 @@ void pipeHandler(char *cmdArgs[], int argCount);
 void runCmd(char *initCmd, char *txtPath);
 void pipeOnce(char **fArgs, char **sArgs);
 void pipeTwice(char **fArgs, char **sArgs, char **tArgs);
+void pipeWrite(pid_t pid, char *args[], int desc[]);
+void pipeRead(pid_t pid, char *args[], int desc[]);
+void pipeMiddle(pid_t pid, char *args[], int p1[], int p2[]);
+void pipeRead2(pid_t pid, char *args[], int p1[], int p2[]);
 
 
 int main(int argc, char **argv) {
@@ -96,8 +100,8 @@ void handleInput(char *input) {
                 } else if (items == SINGLE_PIPE || items == DOUBLE_PIPE) {
                     doPipe(split, items);
                 } else {
-                    printf("%s%s Incorrect number of args supplied. Supplied %d args:\n", TAG, HI_TAG, items);
-                    for (int i = 0; i < items; i++) printf("%s\n", split[i]);
+                    printf("%s%s Incorrect number of args supplied. Supplied %d args\n", TAG, HI_TAG, items);
+
                 }
 
             }
@@ -129,20 +133,93 @@ void doPipe(char **cmdArgs, int size) {
         if (strcmp(p2, P_STR) != 0) {
             printf("%s%s expected a pipe but got '%s'\n", TAG, DP_TAG, p2);
             return;
-        }
-        if (foundFile(thirdCmd) == ERR) {
+        } else if (foundFile(thirdCmd) == ERR) {
             printf("\n%s%s can't find file %s\n", TAG, DP_TAG, thirdCmd);
-            return;
-        }
-        pipeTwice(fArgs, sArgs, tArgs);
+
+        } else pipeTwice(fArgs, sArgs, tArgs);
 
     } else {
         printf("%s%s encountered issue, hit last else.\n", TAG, DP_TAG);
     }
 }
 
-void pipeWrite(char *args[]) {
 
+void pipeRead(pid_t pid, char *args[], int desc[]) {
+    pid = fork();
+    if (pid < CHILD) printf("%s%s problem while making fork for reader process\n", TAG, PO_TAG);
+    else if (pid == CHILD) {
+        sleep(1);
+        close(desc[WRITE]);
+        int rStat = dup2(desc[READ], READ);
+        if (rStat == ERR) printf("%s%s dup2 failed on redirecting input\n", TAG, PO_TAG);
+        execv(args[0], args);
+    } else {
+        wait(NULL);
+    }
+
+}
+
+
+void pipeRead2(pid_t pid, char *args[], int p1[], int p2[]) {
+    pid = fork();
+    if (pid < CHILD) printf("%s problem while making fork for reader process\n", TAG);
+    else if (pid == CHILD) {
+        sleep(1);
+        if (dup2(p2[READ], READ) == ERR) printf("%s err w dup2\n", TAG);
+        close(p1[READ]);
+        close(p1[WRITE]);
+        close(p2[READ]);
+        close(p2[WRITE]);
+        execv(args[0], args);
+    }
+
+}
+
+
+void pipeMiddle(pid_t pid, char *args[], int p1[], int p2[]) {
+    int stat = pipe(p2);
+    if (stat == ERR) {
+        printf("%s error while piping\n", TAG);
+    }
+    pid = fork();
+    if (pid < CHILD) {
+        printf("%s problem while making fork for writer process\n", TAG);
+    } else if (pid == CHILD) {
+        sleep(1);
+        int ds1 = dup2(p1[READ], READ);
+        int ds2 = dup2(p2[WRITE], WRITE);
+        if (ds1 == ERR || ds2 == ERR) {
+            printf("%s error with dup2\n", TAG);
+            return;
+        }
+        close(p1[WRITE]);
+        close(p1[READ]);
+        close(p2[READ]);
+        close(p2[WRITE]);
+        execv(args[0], args);
+    }
+
+}
+
+
+void pipeWrite(pid_t pid, char *args[], int desc[]) {
+    int stat = pipe(desc);
+    if (stat == ERR) {
+        printf("%s%s error while piping\n", TAG, PO_TAG);
+        return;
+    }
+    pid = fork();
+    if (pid < CHILD) {
+        printf("%s%s problem while making fork for writer process\n", TAG, PO_TAG);
+    } else if (pid == CHILD) {
+        close(desc[READ]);
+        int dStat = dup2(desc[WRITE], WRITE);
+        if (dStat == ERR) {
+            printf("%s%s dup2 failed on redirecting output\n", TAG, PO_TAG);
+            return;
+        }
+        execv(args[0], args);
+    }
 }
 
 
@@ -154,40 +231,13 @@ void pipeOnce(char **fArgs, char **sArgs) {
     // able to look for data in stdin
     int desc[2];
     pipe(desc);
-    pid_t writer, reader;
-    int stat = pipe(desc);
-    if (stat == ERR) {
-        printf("%s%s error while piping\n", TAG, PO_TAG);
-    }
-    writer = fork();
-    if (writer < CHILD) {
-        printf("%s%s problem while making fork for writer process\n", TAG, PO_TAG);
-    } else if (writer == CHILD) {
-        close(desc[READ]);
-        int dStat = dup2(desc[WRITE], WRITE);
-        if (dStat == ERR) {
-            printf("%s%s dup2 failed on redirecting output\n", TAG, PO_TAG);
-        }
-        execv(fArgs[0], fArgs);
-    } else {
-        reader = fork();
-        if (reader < CHILD) printf("%s%s problem while making fork for reader process\n", TAG, PO_TAG);
-        else if (reader == CHILD) {
-            sleep(1);
-            close(desc[WRITE]);
-            int rStat = dup2(desc[READ], READ);
-            if (rStat == ERR) printf("%s%s dup2 failed on redirecting input\n", TAG, PO_TAG);
-            execv(sArgs[0], sArgs);
-        } else {
-            close(desc[WRITE]);
-            close(desc[READ]);
-
-            sleep(2);
-            kill(writer, SIGUSR1);
-            kill(reader, SIGUSR1);
-            wait(NULL);
-        }
-    }
+    pid_t writer = -1, reader = -1;
+    pipeWrite(writer, fArgs, desc);
+    pipeRead(reader, sArgs, desc);
+    sleep(2);
+    close(desc[WRITE]);
+    close(desc[READ]);
+    wait(NULL);
 
 }
 
@@ -199,8 +249,24 @@ void pipeTwice(char **fArgs, char **sArgs, char **tArgs) {
     // to read end  from pipe 1 -> direct stdout to write end of pipe 2-> run cmd 2.
     // next: fork & have child run cmd 3 -> direct stdin
     // to read end -> close write end -> run cmd 3
+    int p1[2], p2[2];
+    pipe(p1);
+    pid_t writer = -1, reader = -1, middle = -1;
+    pipeWrite(writer, fArgs, p1);
+    pipeMiddle(middle, sArgs, p1, p2);
+    pipeRead2(reader, tArgs, p1, p2);
+    sleep(2);
+    close(p1[WRITE]);
+    close(p1[READ]);
+    close(p2[WRITE]);
+    close(p2[READ]);
+    wait(NULL);
+    wait(NULL);
+//    kill(middle, SIGUSR1);
+//    kill(reader, SIGUSR1);
 
 }
+
 
 void runCmd(char *initCmd, char *txtPath) {
     __pid_t forked = fork();

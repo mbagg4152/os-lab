@@ -9,6 +9,7 @@
 
 void cat(char *fname);
 
+
 int main(int argc, char **argv) {
     char *txtPath;
     if (argc == 1) txtPath = NO_PATH;
@@ -20,13 +21,12 @@ int main(int argc, char **argv) {
 
 void cat(char *fname) {
     if (strcmp(fname, NO_PATH) == 0) {
-        int c = getchar();
+        int c = fgetc(stdin);
         if (stdin != NULL) {
             while (c != EOF) {
                 putchar(c);
-                c = getchar();
+                c = fgetc(stdin);
             }
-            printf("\n");
         } else {
             printf("%s There was no file name supplied & stdin is empty. Nothing to do here", TAG);
             exit(1);
@@ -44,7 +44,6 @@ void cat(char *fname) {
             fscanf(txt, "%c", &temp);
             fputc(temp, stdout);
         }
-        printf("\n");
     }
 
 }

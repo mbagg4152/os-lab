@@ -26,54 +26,6 @@ int main(int argc, char **argv) {
 }
 
 
-char *fileToArray(char *path) {
-    char *data;
-    int counter = 0;
-    int cap = 50;
-    if (strcmp(path, NO_PATH) == 0) {
-        if (stdin != NULL) {
-            int used = 0;
-            data = (char *) malloc(sizeof(char) * cap);
-            int c = getchar();
-            while (c != EOF) {
-                if (used == cap) {
-                    cap *= 2;
-                    data = realloc(data, (sizeof(char) * cap));
-                }
-                data[used] = (char) c;
-                used++;
-                c = getchar();
-            }
-            return data;
-        } else {
-            printf("%s There was no file name supplied & stdin is empty. Nothing to do here", TAG);
-            exit(1);
-        }
-
-    } else {
-        FILE *txt = fopen(path, "r");
-        if (txt == NULL) {  // required err message & action on file access failure
-            printf("%s cannot open file '%s'\n", TAG, path);
-            exit(1);
-        }
-
-        data = (char *) malloc(sizeof(char) * cap);
-        while ((!feof(txt)) && (counter < TOTAL_MAX)) {
-            char tmp;
-            fscanf(txt, "%c", &tmp);
-            if (counter == cap) {
-                cap = cap * 2;
-                data = (char *) realloc(data, (sizeof(char) * cap));
-            }
-            data[counter] = tmp;
-            counter++;
-        }
-    }
-
-    return data;
-}
-
-
 void uniq(char *path) {
     char *fileData = fileToArray(path);
     char **splitData = splitFile(fileData);
@@ -95,9 +47,43 @@ void uniq(char *path) {
 
         }
     }
+    for (int i = 0; i < splitLen; i++) fprintf(stdout, "%s", splitData[i]);
+}
 
-    for (int i = 0; i < splitLen; i++) printf("%s", splitData[i]);
-    printf("\n");
+
+char *fileToArray(char *path) {
+    char *data;
+    int counter = 0, cap = 50, used = 0;
+    if (strcmp(path, NO_PATH) == 0) {
+        if (stdin != NULL) {
+            data = (char *) malloc(sizeof(char) * cap);
+            int c = getchar();
+            while (c != EOF) {
+                if (used == cap) data = realloc(data, (sizeof(char) * (cap *= 2)));
+                data[used] = (char) c;
+                used++;
+                c = getchar();
+            }
+        } else {
+            printf("%s There was no file name supplied & stdin is empty. Nothing to do here", TAG);
+            exit(1);
+        }
+
+    } else {
+        FILE *txt = fopen(path, "r");
+        if (txt == NULL) {  // required err message & action on file access failure
+            printf("%s cannot open file '%s'\n", TAG, path);
+            exit(1);
+        }
+        fseek(txt, 0, SEEK_END);
+        long txtSize = ftell(txt);
+        rewind(txt);
+        data = malloc(txtSize);
+        fread(data, 1, txtSize, txt);
+        fclose(txt);
+    }
+    return data;
+
 }
 
 
@@ -108,7 +94,6 @@ char **splitFile(char *input) {
 
     for (int i = 0; i < strlen(input) && input[i] != '\0'; i++) {
         char tmp = input[i];
-        //printf("%c", tmp);
         if (lineCount == MAX_LINES) break;
         if (charCount < MAX_CHARS) {
             if (tmp == '\n') {
