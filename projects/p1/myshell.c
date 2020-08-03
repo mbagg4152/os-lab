@@ -47,7 +47,7 @@
 char **split_file(char *input);
 char *clean_str(char *str);
 int elem_count(char **arr);
-int found_file(char *filePath);
+int found_file(char *file_path);
 void do_pipe(char **cmd_args, int size);
 void input_handler(char *input);
 void connect_pipes(pid_t pid_conn, char **args, int *fst_ends, int *snd_ends);
@@ -59,6 +59,8 @@ void write_pipe(pid_t pid_write, char **args, int *pipe_ends);
 void run_cmd(char *run, char *txt_path);
 
 
+/* Contains the main loop of the shell program , which will not exit unless user
+ * types in 'quit' */
 int main(int argc, char **argv) {
     char input[MAX_INP_LEN];
     printf("myshell can run 3 commands: my-cat, my-my-uniq & my-wc."
@@ -78,6 +80,10 @@ int main(int argc, char **argv) {
 }
 
 
+/* Reads through the user input and looks for and addresses errors such as missing files,
+ * missing arguments, incorrect input format, etc.
+ * If input and file pass the check then the function decided whether to run a single
+ * command, a command with one pipe or a command with two pipes. */
 void input_handler(char *input) {
     if (strcmp(input, "\n") != 0 && (input != NULL)) { // make sure theres some input
         if ((strchr(input, ' ')) == NULL)
@@ -109,6 +115,7 @@ void input_handler(char *input) {
 }
 
 
+/* Runs the simple command supplied at the prompt */
 void run_cmd(char *run, char *txt_path) {
     __pid_t forked = fork();
     if (forked == 0) {
@@ -124,6 +131,9 @@ void run_cmd(char *run, char *txt_path) {
 }
 
 
+/* Checks each input argument and validates accordingly. Based on number of arguments,
+ * this function will either run a single pipe or double pipe as long
+ * as input is formatted correctly */
 void do_pipe(char **cmd_args, int size) {
     char *fst_cmd = clean_str(cmd_args[0]);
     char *txt_path = clean_str(cmd_args[1]);
@@ -162,6 +172,7 @@ void do_pipe(char **cmd_args, int size) {
 }
 
 
+/* Handles single pipe instructions */
 void pipe_once(char **fst_args, char **snd_args) {
     int pipe_ends[2];
     pipe(pipe_ends);
@@ -177,6 +188,7 @@ void pipe_once(char **fst_args, char **snd_args) {
 }
 
 
+/* Handles double pipe instructions */
 void pipe_twice(char **fst_args, char **snd_args, char **thd_args) {
     int fst_pipe_ends[2], snd_pipe_ends[2];
     pid_t writer = -1;
@@ -276,25 +288,26 @@ void read_second_pipe(pid_t pid_read, char **args, int *fst_ends, int *snd_ends)
         // try to redirect stdin to read end of pipe
         if (dup2(snd_ends[READ], READ) == ERR) {
             printf("%s dup2 failed on redirecting input\n", TAG);
+        } else {
+            // close both pipes
+            close(fst_ends[READ]);
+            close(fst_ends[WRITE]);
+            close(snd_ends[READ]);
+            close(snd_ends[WRITE]);
+            execv(args[0], args);
         }
-
-        // close both pipes
-        close(fst_ends[READ]);
-        close(fst_ends[WRITE]);
-        close(snd_ends[READ]);
-        close(snd_ends[WRITE]);
-        execv(args[0], args);
     }
-
 }
 
 
-int found_file(char *filePath) {
-    if (access(filePath, R_OK) != ERR) return TRUE;
+/* Simple function to check if a file exists */
+int found_file(char *file_path) {
+    if (access(file_path, R_OK) != ERR) return TRUE;
     else return ERR;
 }
 
 
+/* Used to get number of elements in a 2D char array */
 int elem_count(char **arr) {
     int i = 0;
     for (; i < MAX_ARG_LEN + 1; i++) {
@@ -304,22 +317,23 @@ int elem_count(char **arr) {
 }
 
 
+/* Used to split input into string array for easier access to desired args */
 char **split_file(char *input) {
-    char *splitStr = strtok(input, " ");
-    char **runInfo = malloc(MAX_ARG_LEN * (sizeof(char *)));
-    int cmdCount = 0;
-    while (splitStr != NULL) {
-        if (cmdCount > MAX_ARG_LEN) break;
-        runInfo[cmdCount] = malloc(CMD_LEN * (sizeof(char)));
-        runInfo[cmdCount] = splitStr;
-        splitStr = strtok(NULL, " ");
-        cmdCount++;
+    char *split_str = strtok(input, " ");
+    char **run_info = malloc(MAX_ARG_LEN * (sizeof(char *)));
+    int cmd_count = 0;
+    while (split_str != NULL) {
+        if (cmd_count > MAX_ARG_LEN) break;
+        run_info[cmd_count] = malloc(CMD_LEN * (sizeof(char)));
+        run_info[cmd_count] = split_str;
+        split_str = strtok(NULL, " ");
+        cmd_count++;
     }
-    //printf("cmdCount: %d\n", cmdCount);
-    return runInfo;
+    return run_info;
 }
 
 
+/* Strips all extra whitespace */
 char *clean_str(char *str) {
     char *stripped = malloc(strlen(str));
     int new = 0, old = 0;
