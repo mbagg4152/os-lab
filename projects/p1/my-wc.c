@@ -1,3 +1,9 @@
+/*
+    Maggie Horton
+    CS-451
+    Summer 2020
+    Project 1: my-wc.c
+*/
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>

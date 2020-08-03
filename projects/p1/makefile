@@ -16,7 +16,7 @@ my-uniq: my-uniq.c
 my-wc: my-wc.c
 	gcc -o my-wc my-wc.c $(f)
 
-cleanString:
+clean:
 	rm myshell
 	rm my-cat
 	rm my-uniq

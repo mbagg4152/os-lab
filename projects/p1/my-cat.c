@@ -1,3 +1,9 @@
+/*
+    Maggie Horton
+    CS-451
+    Summer 2020
+    Project 1: my-cat.c
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
