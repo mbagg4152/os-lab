@@ -2,6 +2,7 @@
     Maggie Horton
     CS-451
     Summer 2020
+    Project 1: myshell.c
 */
 #include <ctype.h>
 #include <signal.h>
@@ -59,8 +60,13 @@ void write_pipe(pid_t pid_write, char **args, int *pipe_ends);
 void run_cmd(char *run, char *txt_path);
 
 
-/* Contains the main loop of the shell program , which will not exit unless user
- * types in 'quit' */
+/******************************************************************************
+ * Function: main
+ * Details: Contains the main loop of the shell program , which will not
+ *          exit unless user types 'quit'
+ * Input: Command line arguments & argument count
+ * Output: Nothing
+ ******************************************************************************/
 int main(int argc, char **argv) {
     char input[MAX_INP_LEN];
     printf("myshell can run 3 commands: my-cat, my-my-uniq & my-wc."
@@ -80,10 +86,16 @@ int main(int argc, char **argv) {
 }
 
 
-/* Reads through the user input and looks for and addresses errors such as missing files,
- * missing arguments, incorrect input format, etc.
- * If input and file pass the check then the function decided whether to run a single
- * command, a command with one pipe or a command with two pipes. */
+/******************************************************************************
+ * Function: input_handler
+ * Details: Reads through the user input and looks for and addresses errors
+ *          such as missing files, missing arguments, incorrect input format,
+ *          etc. If input and file pass the check then the function decided
+ *          whether to run a single command, a command with one pipe or a
+ *          command with two pipes.
+ * Input: User input (char*)
+ * Output: Nothing
+ ******************************************************************************/
 void input_handler(char *input) {
     if (strcmp(input, "\n") != 0 && (input != NULL)) { // make sure theres some input
         if ((strchr(input, ' ')) == NULL)
@@ -95,8 +107,7 @@ void input_handler(char *input) {
             char *init_cmd = clean_str(split_input[0]);
             if (found_file(init_cmd) == ERR) printf("\n%s%s oh no can't find file %s\n", TAG, IH_TAG, init_cmd);
             else {
-                char run[MAX_INP_LEN + 3] = "./";
-                strcat(run, init_cmd);
+
                 char *txt_path = clean_str(split_input[1]);
 
                 if (arg_cnt == NO_PIPE) { // basic command
@@ -115,8 +126,15 @@ void input_handler(char *input) {
 }
 
 
-/* Runs the simple command supplied at the prompt */
-void run_cmd(char *run, char *txt_path) {
+/******************************************************************************
+ * Function: run_cmd
+ * Details: Runs the simple command supplied at the prompt
+ * Input: Command/program name & number of args
+ * Output: Nothing
+ ******************************************************************************/
+void run_cmd(char *init_cmd, char *txt_path) {
+    char run[MAX_INP_LEN + 3] = "./";
+    strcat(run, init_cmd);
     __pid_t forked = fork();
     if (forked == 0) {
         char *args[] = {run, txt_path, NULL};
@@ -131,16 +149,27 @@ void run_cmd(char *run, char *txt_path) {
 }
 
 
-/* Checks each input argument and validates accordingly. Based on number of arguments,
- * this function will either run a single pipe or double pipe as long
- * as input is formatted correctly */
+/******************************************************************************
+ * Function: do_pipe
+ * Details: Checks each input argument and validates accordingly. Based on
+ *          number of arguments, this function will either run a single pipe
+ *          or double pipe as long as input is formatted correctly
+ * Input: A list of arguments (char**) & number of arguments (int)
+ * Output: Nothing
+ ******************************************************************************/
 void do_pipe(char **cmd_args, int size) {
+
     char *fst_cmd = clean_str(cmd_args[0]);
+    char rn_fst[sizeof(fst_cmd) + 3] = "./";
     char *txt_path = clean_str(cmd_args[1]);
     char *pipe_str1 = clean_str(cmd_args[2]);
     char *sec_cmd = clean_str(cmd_args[3]);
-    char *fst_args[] = {fst_cmd, txt_path, NULL};
-    char *sec_args[] = {sec_cmd, NULL};
+    char rn_sec[sizeof(sec_cmd) + 3] = "./";
+    strcat(rn_fst, fst_cmd);
+    strcat(rn_sec, sec_cmd);
+
+    char *fst_args[] = {rn_fst, txt_path, NULL};
+    char *sec_args[] = {rn_sec, NULL};
     if (strcmp(pipe_str1, P_STR) != 0) {
         printf("%s%s Expected pipe but got '%s'.\n", TAG, DP_TAG, pipe_str1);
         return;
@@ -153,13 +182,15 @@ void do_pipe(char **cmd_args, int size) {
         } else if (size == DOUBLE_PIPE) {
             char *pipe_str2 = clean_str(cmd_args[4]);
             char *thd_cmd = clean_str(cmd_args[5]);
-            char *thd_args[] = {thd_cmd, NULL};
+            char rn_thd[sizeof(thd_cmd) + 3] = "./";
+            strcat(rn_thd, thd_cmd);
+            char *thd_args[] = {rn_thd, NULL};
 
             if (strcmp(pipe_str2, P_STR) != 0) {
                 printf("%s%s Expected pipe but got '%s'.\n", TAG, DP_TAG, pipe_str2);
                 return;
             } else if (found_file(thd_cmd) == ERR) {
-                printf("%s%s Couldn't find '%s'.\n", TAG, DP_TAG, sec_cmd);
+                printf("%s%s Couldn't find '%s'.\n", TAG, DP_TAG, thd_cmd);
                 return;
             } else pipe_twice(fst_args, sec_args, thd_args);
 
@@ -172,7 +203,12 @@ void do_pipe(char **cmd_args, int size) {
 }
 
 
-/* Handles single pipe instructions */
+/******************************************************************************
+ * Function: pipe_once
+ * Details: Handles the execution/implementation for single pipe commands
+ * Input: Args for both the first and second commands (char**)
+ * Output: Nothing
+ ******************************************************************************/
 void pipe_once(char **fst_args, char **snd_args) {
     int pipe_ends[2];
     pipe(pipe_ends);
@@ -188,12 +224,17 @@ void pipe_once(char **fst_args, char **snd_args) {
 }
 
 
-/* Handles double pipe instructions */
+/******************************************************************************
+ * Function: pipe_twice
+ * Details: Handles the execution/implementation for double pipe commands
+ * Input: Args for all three commands (char**)
+ * Output: Nothing
+ ******************************************************************************/
 void pipe_twice(char **fst_args, char **snd_args, char **thd_args) {
     int fst_pipe_ends[2], snd_pipe_ends[2];
     pid_t writer = -1;
-    pid_t reader = -1;
     pid_t conn = -1;
+    pid_t reader = -1;
 
     write_pipe(writer, fst_args, fst_pipe_ends);
     close(fst_pipe_ends[WRITE]);
@@ -211,7 +252,14 @@ void pipe_twice(char **fst_args, char **snd_args, char **thd_args) {
 }
 
 
-/* Used to write to pipe for both single and double pipe implementation */
+/******************************************************************************
+ * Function: write_pipe
+ * Details: Used by both pipe_once & pipe_twice to redirect the first commands
+ *          output to the write end of the pipe.
+ * Input: pid for child process (pid_t), args for the command that is writing to
+ *        the pipe (char**) & the file descriptors for the pipe (int*)
+ * Output: Nothing
+ ******************************************************************************/
 void write_pipe(pid_t pid_write, char **args, int *pipe_ends) {
     if (pipe(pipe_ends) == ERR) {
         printf("%s%s error while piping\n", TAG, PO_TAG);
@@ -232,7 +280,14 @@ void write_pipe(pid_t pid_write, char **args, int *pipe_ends) {
 }
 
 
-/* Used to read from pipe for single pipe implementation only */
+/******************************************************************************
+ * Function: read_single_pipe
+ * Details: Used by pipe_once only in order to redirect the commands input
+ *          to the read end of the pipe.
+ * Input: pid for child process (pid_t), args for the command that is reading
+ *        from the pipe (char**) & the file descriptors for the pipe (int*)
+ * Output:
+ ******************************************************************************/
 void read_single_pipe(pid_t pid_read, char **args, int *pipe_ends) {
     pid_read = fork();
     if (pid_read < CHILD) printf("%s%s problem while making fork for reader process\n", TAG, PO_TAG);
@@ -252,7 +307,15 @@ void read_single_pipe(pid_t pid_read, char **args, int *pipe_ends) {
 }
 
 
-/* Used to read from the first pipe and write to the second pipe */
+/******************************************************************************
+ * Function: connect_pipes
+ * Details: Used by pipe_twice only. Redirects the first commands input to
+ *          the read end of the first pipe and redirects the second commands
+ *          output to the write end of the second pipe.
+ * Input: pid for child process (pid_t), args for the command that is writing to
+ *        the pipe (char**) & the file descriptors for both of the pipes (int*)
+ * Output: Nothing
+ ******************************************************************************/
 void connect_pipes(pid_t pid_conn, char **args, int *fst_ends, int *snd_ends) {
     if (pipe(snd_ends) == ERR) {
         printf("%s error while piping\n", TAG);
@@ -262,6 +325,7 @@ void connect_pipes(pid_t pid_conn, char **args, int *fst_ends, int *snd_ends) {
         printf("%s problem while making fork for writer process\n", TAG);
     } else if (pid_conn == CHILD) {
         sleep(1);
+        // try to redirect the input & output of the commands
         if ((dup2(fst_ends[READ], READ) == ERR) || (dup2(snd_ends[WRITE], WRITE) == ERR)) {
             printf("%s error with dup2\n", TAG);
             return;
@@ -276,9 +340,16 @@ void connect_pipes(pid_t pid_conn, char **args, int *fst_ends, int *snd_ends) {
 }
 
 
-/* Used to read from second pipe only. The main difference between this function
- * and read_single_pipe is that this function needs to account for more pipes
- * that it needs to close. */
+/******************************************************************************
+ * Function: read_second_pipe
+ * Details: Used to read from second pipe only. The main difference between
+ *          this function & read_single_pipe is that this function needs to
+ *          account for more pipes that it needs to close.
+ * Input: pid for child process (pid_t), args for the command that is reading
+ *        from the second pipe (char**) & the file descriptors for both of
+ *        the pipes (int*)
+ * Output: Nothing
+ ******************************************************************************/
 void read_second_pipe(pid_t pid_read, char **args, int *fst_ends, int *snd_ends) {
     pid_read = fork();
     if (pid_read < CHILD) {
@@ -300,14 +371,24 @@ void read_second_pipe(pid_t pid_read, char **args, int *fst_ends, int *snd_ends)
 }
 
 
-/* Simple function to check if a file exists */
+/******************************************************************************
+ * Function: found_file
+ * Details: Simple function to check if a file exists
+ * Input: File path to be checked (char*)
+ * Output: Int value based on whether the file was found or not
+ ******************************************************************************/
 int found_file(char *file_path) {
     if (access(file_path, R_OK) != ERR) return TRUE;
     else return ERR;
 }
 
 
-/* Used to get number of elements in a 2D char array */
+/******************************************************************************
+ * Function: elem_count
+ * Details: Used to get number of elements in a 2D char array
+ * Input: Array of strings (char**)
+ * Output: Number of strings in array (int)
+ ******************************************************************************/
 int elem_count(char **arr) {
     int i = 0;
     for (; i < MAX_ARG_LEN + 1; i++) {
@@ -317,7 +398,13 @@ int elem_count(char **arr) {
 }
 
 
-/* Used to split input into string array for easier access to desired args */
+/******************************************************************************
+ * Function: split_file
+ * Details: Used to split input into string array for easier access to desired
+ *          args
+ * Input: A single string (char*)
+ * Output: An array of strings (char**)
+ ******************************************************************************/
 char **split_file(char *input) {
     char *split_str = strtok(input, " ");
     char **run_info = malloc(MAX_ARG_LEN * (sizeof(char *)));
@@ -333,7 +420,12 @@ char **split_file(char *input) {
 }
 
 
-/* Strips all extra whitespace */
+/******************************************************************************
+ * Function: clean_str
+ * Details: Strips all extra whitespace
+ * Input: String to be 'cleaned' (char*)
+ * Output: The same string with excess whitespace removed
+ ******************************************************************************/
 char *clean_str(char *str) {
     char *stripped = malloc(strlen(str));
     int new = 0, old = 0;

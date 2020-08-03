@@ -13,11 +13,22 @@
 
 void wc(char *path);
 
+// used as a 'flag', very unlikely file name
 #define NO_PATH "#%?no#%?path#%?"
 #define TAG  "my-wc:"
 int cap = 512;
 
 
+/******************************************************************************
+ * Function: main
+ * Details: This is the main function for the my-wc command which just
+ *          checks for a file path in args. If no path is found, then it
+ *          assumes that it is being passed data from a pipe, then a flag-string
+ *          is passed to wc() so that it knows to look for data from stdin.
+ * Input: Command/program name (char*) & input text file path (char*) supplied
+ *        from the commandline.
+ * Output: 0 upon successful execution
+ ******************************************************************************/
 int main(int argc, char **argv) {
     char *txtFileName;
     if (argc == 1) txtFileName = NO_PATH;
@@ -27,6 +38,13 @@ int main(int argc, char **argv) {
 }
 
 
+/******************************************************************************
+ * Function: wc
+ * Details: Replicates the base functionality of the linux command wc. Takes in
+ *          a file & outputs the number of lines & words in the file.
+ * Input: Path to file (char*)
+ * Output: Nothing
+ ******************************************************************************/
 void wc(char *path) {
     char *data;
     int counter = 0, words = 0, lines = 0;

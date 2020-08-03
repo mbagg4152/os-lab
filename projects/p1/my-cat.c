@@ -10,12 +10,23 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+// used as a 'flag', very unlikely file name
 #define NO_PATH "#%?no#%?path#%?"
 #define TAG  "my-cat:"
 
 void cat(char *f_name);
 
 
+/******************************************************************************
+ * Function: main
+ * Details: This is the main function for the my-cat command which just
+ *          checks for a file path in args. If no path is found, then it
+ *          assumes that it is being passed data from a pipe, then a flag-string
+ *          is passed to my-cat() so that it knows to look for data from stdin.
+ * Input: Command/program name (char*) & input text file path (char*) supplied
+ *        from the commandline.
+ * Output: 0 upon successful execution
+ ******************************************************************************/
 int main(int argc, char **argv) {
     char *inp_path;
     if (argc == 1) inp_path = NO_PATH;
@@ -24,6 +35,13 @@ int main(int argc, char **argv) {
 }
 
 
+/******************************************************************************
+ * Function: cat
+ * Details: Replicates the base functionality of the linux command cat. Reads
+ *          a file & displays its contents in the terminal.
+ * Input: Path of file to display (char*)
+ * Output: Nothing
+ ******************************************************************************/
 void cat(char *f_name) {
     if (strcmp(f_name, NO_PATH) == 0) {
         int c = fgetc(stdin);
