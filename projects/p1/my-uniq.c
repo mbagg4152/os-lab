@@ -10,46 +10,44 @@
 #define TOTAL_MAX  MAX_CHARS * MAX_LINES
 
 #define NO_PATH "#%?no#%?path#%?"
-#define TAG  "my-uniq"
+#define TAG  "my-my_uniq"
 
-char *fileToArray(char *path);
-char **splitFile(char *input);
-void uniq(char *path);
+void my_uniq(char *inp_path);
 
 
 int main(int argc, char **argv) {
-    char *txtFileName;
-    if (argc == 1) txtFileName = NO_PATH;
-    else txtFileName = argv[1];
-    uniq(txtFileName);
+    char *inp_path;
+    if (argc == 1) inp_path = NO_PATH;
+    else inp_path = argv[1];
+    my_uniq(inp_path);
     return 0;
 }
 
 
-void uniq(char *path) {
-    char splitData[MAX_LINES][MAX_CHARS];
-    FILE *f;
-    if (strcmp(path, NO_PATH) == 0) f = stdin;
-    else f = fopen(path, "r");
+void my_uniq(char *inp_path) {
+    char inp_lines[MAX_LINES][MAX_CHARS];
+    FILE *file_to_check;
+    if (strcmp(inp_path, NO_PATH) == 0) { file_to_check = stdin; }
+    else file_to_check = fopen(inp_path, "r");
 
     int count = 0;
-    while (fgets(splitData[count], MAX_CHARS, f)) {
-        splitData[count][strlen(splitData[count]) - 1] = '\n';
+    while (fgets(inp_lines[count], MAX_CHARS, file_to_check)) {
+        inp_lines[count][strlen(inp_lines[count]) - 1] = '\n';
         count++;
     }
 
-    int splitLen = count;
-    for (int i = 0; i < splitLen; i++) {
-        for (int j = i + 1; j < splitLen;) {
-            if (strcmp(splitData[j], splitData[i]) == 0) {
-                for (int k = j; k < splitLen; k++) {
-                    strcpy(splitData[k], splitData[k + 1]);
+    int len = count;
+    for (int i = 0; i < len; i++) {
+        for (int j = i + 1; j < len;) {
+            if (strcmp(inp_lines[j], inp_lines[i]) == 0) {
+                for (int k = j; k < len; k++) {
+                    strcpy(inp_lines[k], inp_lines[k + 1]);
                 }
-                splitLen--;
+                len--;
             } else {
                 j++;
             }
         }
     }
-    for (int i = 0; i < splitLen; i++) printf("%s", splitData[i]);
+    for (int i = 0; i < len; i++) printf("%s", inp_lines[i]);
 }

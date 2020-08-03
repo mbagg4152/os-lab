@@ -19,5 +19,5 @@ my-wc: my-wc.c
 clean:
 	rm myshell
 	rm my-cat
-	rm my-uniq
+	rm my-my_uniq
 	rm my-wc

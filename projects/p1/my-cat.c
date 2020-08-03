@@ -13,20 +13,19 @@
 #define NO_PATH "#%?no#%?path#%?"
 #define TAG  "my-cat:"
 
-void cat(char *fname);
+void cat(char *f_name);
 
 
 int main(int argc, char **argv) {
-    char *txtPath;
-    if (argc == 1) txtPath = NO_PATH;
-    else txtPath = argv[1];
-    cat(txtPath);
-    return 0;
+    char *inp_path;
+    if (argc == 1) inp_path = NO_PATH;
+    else inp_path = argv[1];
+    cat(inp_path);
 }
 
 
-void cat(char *fname) {
-    if (strcmp(fname, NO_PATH) == 0) {
+void cat(char *f_name) {
+    if (strcmp(f_name, NO_PATH) == 0) {
         int c = fgetc(stdin);
         if (stdin != NULL) {
             while (c != EOF) {
@@ -39,9 +38,9 @@ void cat(char *fname) {
         }
 
     } else {
-        FILE *txt = fopen(fname, "r");
+        FILE *txt = fopen(f_name, "r");
         if (txt == NULL) { // required err message & action on file access failure
-            printf("%s cannot open file '%s'.\n", TAG, fname);
+            printf("%s cannot open file '%s'.\n", TAG, f_name);
             exit(1);
         }
 
