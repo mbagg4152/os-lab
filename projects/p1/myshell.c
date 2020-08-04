@@ -32,7 +32,7 @@
 #define QUIT  "quit\n"      // used to string match for closing program
 
 // sig/bool
-#define ERR -1              // err code
+#define ERR (-1)            // err code
 #define FALSE 0
 #define TRUE 1
 
@@ -49,15 +49,15 @@ char **split_file(char *input);
 char *clean_str(char *str);
 int elem_count(char **arr);
 int found_file(char *file_path);
+void connect_pipes(pid_t pid_conn, char **args, int *fst_ends, int *snd_ends);
 void do_pipe(char **cmd_args, int size);
 void input_handler(char *input);
-void connect_pipes(pid_t pid_conn, char **args, int *fst_ends, int *snd_ends);
 void pipe_once(char **fst_args, char **snd_args);
-void read_single_pipe(pid_t pid_read, char **args, int *pipe_ends);
-void read_second_pipe(pid_t pid_read, char **args, int *fst_ends, int *snd_ends);
 void pipe_twice(char **fst_args, char **snd_args, char **thd_args);
+void read_second_pipe(pid_t pid_read, char **args, int *fst_ends, int *snd_ends);
+void read_single_pipe(pid_t pid_read, char **args, int *pipe_ends);
+void run_cmd(char *init_cmd, char *txt_path);
 void write_pipe(pid_t pid_write, char **args, int *pipe_ends);
-void run_cmd(char *run, char *txt_path);
 
 
 /******************************************************************************
