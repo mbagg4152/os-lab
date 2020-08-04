@@ -10,69 +10,77 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <fcntl.h>
 
-#define maxlen 50
-#define good 2 // not needed probs, maybe do tru instead
-#define bad -1 // not needed probs, maybe do false instead idk also maybe have it be 0 
+#define MAX_LEN 90
+#define CMD_LEN 20
+#define TRUE 1
+#define ERR (-1)
+#define FALSE 0
+#define KEY  "quit"
 
-// these constants arent rly necessary
-const char* key = "quit\n";
-const char* dnl = "\n\n";
-const char* fnl = "\n\n\n\n";
+int in_dir(char *path);
+void run_sort(char *cmd_name, char *txt_path, int write_flag, char *out_path);
 
-// instead of doing func sigs, probably just place them in order of usage, with main @ the bottom
-void runSort(char* cname, char* fname);
-int inDir(char* fpath); 
 
-int main(int argc, char** argv){
-    
-    // could be better to have some of the stuff in the loops in their own functions
-    char input[maxlen];
-    int comp = 5;  // maybe create a "bool" flag for the while loop instead
-    while(comp != 0){
+int main(int argc, char **argv) {
+    char input[MAX_LEN];
+
+    char arg_1[CMD_LEN] = "";
+    char arg_2[CMD_LEN] = "";
+    char arg_3[CMD_LEN] = "";
+    char arg_4[CMD_LEN] = "";
+    int comp = 1;
+    while (comp != 0) {
         printf("myprompt> ");
-        fgets(input, maxlen, stdin);
-        comp = strcmp(key, input);
-        if(comp == 0) {
-            printf("%sSee ya!%s", fnl, dnl);
-            break;
+        fgets(input, MAX_LEN, stdin);
+        sscanf(input, "%s %s %s %s", arg_1, arg_2, arg_3, arg_4);
+
+        comp = strcmp(KEY, arg_1);
+        if (comp == 0) {
+            printf("\nSee ya!\n");
+            exit(0);
         }
-        
-        // all the string stuff could probably be moved into different function
-        char* space = strchr(input, ' '); // i dont think theres a check for invalid input so this may not be necessary
-        if(space == NULL) printf("incorrent arg format, try again\n"); // avoid segfault w/ strtok
-        else {
-            char* cname = strtok(input, " "); // get name of program to run
-            char* fname = strtok(NULL, " "); // get argument for program
-            int fnameLen = strlen(fname);
-            fname[fnameLen - 1] = '\0'; // just gotta make sure that extra spaces are removed or else it doesnt work right
-        
-            // maybe instead of tiny little function inDir, just do what the function does here
-            if(inDir(cname) == bad) printf("%scan't find specified file %s, try again%s", dnl, cname, dnl);
-            else if(inDir(fname) == bad) printf("%scan't find specified file %s, try again%s", dnl, fname, dnl);
-            else {
-                printf("%s", dnl);
-                runSort(cname,fname);  // tbh could probably just move the stuff from runSort here
-                printf("%s", dnl);
-            }
+
+        if ((in_dir(arg_1) == ERR) || strlen(arg_1) <= 0) {
+            printf("\n%s is unrecognized as a command or program\n", arg_1);
+        } else if (in_dir(arg_2) == ERR || strlen(arg_1) <= 0) {
+            printf("\ncan't find input file '%s', try again\n", arg_2);
+        } else if ((strcmp(arg_3, ">") == 0) && (strlen(arg_4) <= 0)) {
+            printf("got empty value after '>'.\n");
+        } else if ((strcmp(arg_3, ">") == 0) && strlen(arg_4) > 0) {
+            run_sort(arg_1, arg_2, TRUE, arg_4);
+        } else {
+            printf("\n");
+            run_sort(arg_1, arg_2, FALSE, NULL);
+            printf("\n");
         }
     }
-    return 0;
 }
 
-void runSort(char* cname, char* fname){ // create process to run mysort
-    __pid_t pid = fork();
-    char runArg[maxlen + 3] = "./"; // maybe concat ./ before sending here
-    strcat(runArg, cname);
 
-    if (pid == 0){ // the child
-        char* args[] = {runArg, fname, NULL};
-        execvp(args[0], args);
-    }   else waitpid(pid,0,0);
+void run_sort(char *cmd_name, char *txt_path, int write_flag, char *out_path) { // create process to run mysort
+    pid_t pid = fork();
+    char run_arg[CMD_LEN + 3] = "./";
+    strcat(run_arg, cmd_name);
+
+    if (pid == 0) { // the child
+        char *args[] = {run_arg, txt_path, NULL};
+        if (write_flag == TRUE) {
+            int fd = open(out_path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+            dup2(fd, 1);
+            close(fd);
+            execvp(args[0], args);
+        } else {
+            execvp(args[0], args);
+        }
+
+    } else waitpid(pid, 0, 0);
 }
 
-int inDir(char* fpath){ // checks if file is present in given path, could potentially use other methods to file check HINT HINT
-    if(access(fpath, F_OK) != bad) return good;
-    else return bad;
+
+int in_dir(char *path) {
+    if (access(path, F_OK) != ERR) return TRUE;
+    else return ERR;
 }
 
