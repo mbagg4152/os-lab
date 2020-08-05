@@ -1,20 +1,22 @@
-/*
-    Maggie Horton
-    CS-451
-    Summer 2020
-    Project 1: my-cat.c
-*/
+/******************************************************************************
+ * Maggie Horton
+ * CS-451
+ * Summer 2020
+ * Project 1, my-cat.c: Takes in a text file or data piped from stdin &
+ * 						performs similarly to the linux command cat.
+ * 						It takes each char from the file and then displays
+ * 						it to stdout.
+ ******************************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
-// used as a 'flag', very unlikely file name
-#define NO_PATH "#%?no#%?path#%?"
-#define TAG  "my-cat:"
+#define NO_PATH "#%?no#%?path#%?" // used as a 'flag', very unlikely file name
+#define TAG  "my-cat:" // used when printing certain messages
 
-void cat(char *f_name);
+void my_cat(char *txt_path);
 
 
 /******************************************************************************
@@ -28,10 +30,10 @@ void cat(char *f_name);
  * Output: 0 upon successful execution
  ******************************************************************************/
 int main(int argc, char **argv) {
-    char *inp_path;
-    if (argc == 1) inp_path = NO_PATH;
-    else inp_path = argv[1];
-    cat(inp_path);
+	char *inp_path;
+	if (argc == 1) inp_path = NO_PATH;
+	else inp_path = argv[1];
+	my_cat(inp_path);
 }
 
 
@@ -42,31 +44,31 @@ int main(int argc, char **argv) {
  * Input: Path of file to display (char*)
  * Output: Nothing
  ******************************************************************************/
-void cat(char *f_name) {
-    if (strcmp(f_name, NO_PATH) == 0) {
-        int c = fgetc(stdin);
-        if (stdin != NULL) {
-            while (c != EOF) {
-                putchar(c);
-                c = fgetc(stdin);
-            }
-        } else {
-            printf("%s There was no file name supplied & stdin is empty. Nothing to do here", TAG);
-            exit(1);
-        }
+void my_cat(char *txt_path) {
+	if (strcmp(txt_path, NO_PATH) == 0) {
+		int tmp_char = fgetc(stdin);
+		if (stdin != NULL) {
+			while (tmp_char != EOF) {
+				putchar(tmp_char);
+				tmp_char = fgetc(stdin);
+			}
+		} else {
+			printf("%s There was no file name supplied & stdin is empty. Nothing to do here", TAG);
+			exit(1);
+		}
 
-    } else {
-        FILE *txt = fopen(f_name, "r");
-        if (txt == NULL) { // required err message & action on file access failure
-            printf("%s cannot open file '%s'.\n", TAG, f_name);
-            exit(1);
-        }
+	} else {
+		FILE *txt_file = fopen(txt_path, "r");
+		if (txt_file == NULL) { // required err message & action on file access failure
+			printf("%s cannot open file '%s'.\n", TAG, txt_path);
+			exit(1);
+		}
 
-        char temp;
-        while (!feof(txt)) {
-            fscanf(txt, "%c", &temp);
-            fputc(temp, stdout);
-        }
-    }
+		char tmp_print;
+		while (!feof(txt_file)) {
+			fscanf(txt_file, "%c", &tmp_print);
+			fputc(tmp_print, stdout);
+		}
+	}
 
 }
