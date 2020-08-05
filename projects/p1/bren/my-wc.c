@@ -24,6 +24,10 @@ char space = ' ';
 char tab = '\t';
 
 
+/*
+ 	fillArr: parses input and then fills up the input array.
+ 	returns the fileSize of the input.
+ */
 long fillArr (char *inputPath)
 {
 	long fileSize;
@@ -71,11 +75,6 @@ long fillArr (char *inputPath)
 		}
 
 	}
-//	for (int i = 0; i < (int) fileSize; i++)
-//	{
-//		printf ("%c", input[i]);
-//
-//	}
 	return fileSize;
 
 }

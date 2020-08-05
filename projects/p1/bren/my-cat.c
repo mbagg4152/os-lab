@@ -13,51 +13,49 @@
  	Replicates the functionality (without flags) of the linux command cat.
  	Reads a file & displays its contents in the terminal.
  */
-void catFile(char *fileName)
+void catFile (char *fileName)
 {
 	if (fileName != NULL)
 	{
-		FILE *inputFile = fopen(fileName, "r");
+		FILE *inputFile = fopen (fileName, "r");
 		if (inputFile == NULL)
 		{
-			printf("my-cat: cannot open input file.\n");
-			exit(1);
+			printf ("my-cat: cannot open input file.\n");
+			exit (1);
 		}
 
 		char pc;
-		while (!feof(inputFile))
+		while (!feof (inputFile))
 		{
-			fscanf(inputFile, "%c", &pc);
-			fputc(pc, stdout);
+			fscanf (inputFile, "%c", &pc);
+			fputc (pc, stdout);
 		}
 	}
 	else
 	{
-		int gc = fgetc(stdin);
+		int gc = fgetc (stdin);
 		if (stdin != NULL)
 		{
 			while (gc != EOF)
 			{
-				putchar(gc);
-				gc = fgetc(stdin);
+				putchar (gc);
+				gc = fgetc (stdin);
 			}
 		}
 		else
 		{
-			printf("my-cat: no file path or stdin data has been provided.\n");
-			exit(1);
+			printf ("my-cat: no file path or stdin data has been provided.\n");
+			exit (1);
 		}
 	}
 }
 
 
 /*
- 	main: This is the main function for the my-cat command which just
- 	checks for a file path in args. If no path is found, then it
- 	assumes that it is being passed data from a pipe, then a flag-string
- 	is passed to my-cat() so that it knows to look for data from stdin.
+ 	main: checks for a file path in args. if no path is supplied then pass
+ 	NULL to myCat which will look for data in stdin.
 */
-int main(int argc, char **argv)
+int main (int argc, char **argv)
 {
 	char *fileName;
 	if (argc == 1)
@@ -68,7 +66,7 @@ int main(int argc, char **argv)
 	{
 		fileName = argv[1];
 	}
-	catFile(fileName);
+	catFile (fileName);
 }
 
 

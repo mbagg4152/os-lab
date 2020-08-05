@@ -21,7 +21,7 @@ char lines[lineLimit][charLimit]; // accessing globally is less trouble than pas
  	every other line. if a duplicate is found, then the global lines is updated as well as the
  	removed counter. once done, it returns the removed counter.
  */
-int filterDupes(int length)
+int filterDupes (int length)
 {
 	int removed = 0;
 	/* for each line of input, compare it against the next */
@@ -31,14 +31,14 @@ int filterDupes(int length)
 		{
 			char *this = lines[curr];
 			char *nextLine = lines[next];
-			if (strcmp(this, nextLine) == 0)
+			if (strcmp (this, nextLine) == 0)
 			{
 				/* if duplicate is found then delete the second duplicate line */
 				for (int i = next; i < length; i++)
 				{
 					char *tmp = lines[i];
 					char *nextTmp = lines[i + 1];
-					strcpy(tmp, nextTmp);
+					strcpy (tmp, nextTmp);
 				}
 				removed++;
 			}
@@ -57,16 +57,16 @@ int filterDupes(int length)
  	in stdin. if no file or data is found program exits. on success, the lines variable
  	is filled with the lines from the file and the number of lines are returned.
  */
-int processInput(char *fileName)
+int processInput (char *fileName)
 {
 	FILE *input;
 	if (fileName != NULL) // got filename in args
 	{
-		input = fopen(fileName, "r");
+		input = fopen (fileName, "r");
 		if (input == NULL)
 		{
-			fprintf(stderr, "my-uniq: could not find input file.\n");
-			exit(1);
+			fprintf (stderr, "my-uniq: could not find input file.\n");
+			exit (1);
 		}
 	}
 
@@ -76,7 +76,7 @@ int processInput(char *fileName)
 	}
 
 	int length = 0; // counter variable for length of input string array
-	while (fgets(lines[length], charLimit, input))
+	while (fgets (lines[length], charLimit, input))
 	{
 		length++;
 	}
@@ -84,9 +84,9 @@ int processInput(char *fileName)
 	/* replace newlines stripped by fgets */
 	for (int i = 0; i < length; i++)
 	{
-		int lastIndex = (int) strlen(lines[length]) - 1;
+		int lastIndex = (int) strlen (lines[length]) - 1;
 		lines[length][lastIndex] = '\0';
-		strcat(lines[length], "\n");
+		strcat (lines[length], "\n");
 	}
 
 	return length;
@@ -97,21 +97,14 @@ int processInput(char *fileName)
 	myUniq(char*): implementation of the unix command uniq. on successfully reading a file,
 	program displays unique lines.
 */
-void myUniq(char *fileName)
+void myUniq (char *fileName)
 {
-	int length = processInput(fileName);
-	int removed = filterDupes(length);
-//	if (removed == 0)
-////	{
-////		/* not an error but displaying to stdout makes programs include this string
-////		 * in the final output */
-////		fprintf(stderr, "All lines of file are unique.\n");
-////	}
-
+	int length = processInput (fileName);
+	int removed = filterDupes (length);
 	for (int i = 0; i < (length - removed); i++)
 	{
-		char *tmp = lines[i];
-		printf("%s", tmp);
+		char *ch = lines[i];
+		printf ("%s", ch);
 	}
 
 }
@@ -122,15 +115,15 @@ void myUniq(char *fileName)
  	can be found then it passes NULL to myUniq, which handles this and looks for
  	data in stdin.
 */
-int main(int argc, char **argv)
+int main (int argc, char **argv)
 {
 	if (argc > 1) // name given
 	{
-		myUniq(argv[1]);
+		myUniq (argv[1]);
 	}
 	else // assume data from pipe
 	{
-		myUniq(NULL);
+		myUniq (NULL);
 	}
 	return 0;
 }

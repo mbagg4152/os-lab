@@ -2,6 +2,8 @@
 	Brendan Gallagher
    	CS-451 project 1
 */
+
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -11,25 +13,146 @@
 #include <ctype.h>
 #include <string.h>
 
-#define inputLimit  240
-const int argLengthLim = 80;
-const int argCountLim = 5;
-char *prompt = "\nmyprompt> ";
-useconds_t sleepTime = 400;
-
+#define inputLimit  500 // size of user input
+const int argLengthLim = 100; // size of each arg
 int chSize = sizeof (char);
+char *prompt = "\nmyprompt> "; // prompt message
+useconds_t sleepTime = 400; // time to use with usleep
 
-void connect_pipes (pid_t pid_conn, char **args, int *fst_ends, int *snd_ends);
-void do_pipe (char **cmd_args, int size);
+/*
+	singleCommand: takes path of command and input file,
+ 	then forks and runs the program as child process.
+ */
+void singleCommand (char *command, char *filePath)
+{
+	pid_t pidt = fork ();
+	if (fork () == 0)
+	{
+		char usable[inputLimit + 3] = "./";
+		strcat (usable, command);
+		char *args[] = { usable, filePath, NULL };
+		execvp (usable, args);
+	}
+	else
+	{
+		waitpid (pidt, 0, 0);
+		kill (pidt, SIGUSR1);
+	}
+}
 
-void pipe_once (char **fst_args, char **snd_args);
-void pipe_twice (char **fst_args, char **snd_args, char **thd_args);
-void read_second_pipe (pid_t pid_read, char **args, int *fst_ends, int *snd_ends);
-void read_single_pipe (pid_t pid_read, char **args, int *pipe_ends);
-void run_cmd (char *init_cmd, char *txt_path);
-void write_pipe (pid_t pid_write, char **args, int *pipe_ends);
+
+/*
+ 	writeToPipe: used to redirect output of the first command
+ 	for both piping functions.
+ */
+void writeToPipe (char **args1, int *fd)
+{
+	usleep (sleepTime);
+	pipe (fd); // make pipe
+	if (fork () == 0)
+	{
+		/* redirect stdout, close read end and run */
+		dup2 (fd[1], 1);
+		close (fd[0]);
+		execv (args1[0], args1);
+	}
+	else
+	{
+		printf ("something went wrong with pipe.\n");
+	}
+}
 
 
+/*
+ 	onePipe: executes and handles execution of a pipe
+ 	and two commands.
+ */
+void onePipe (char **args1, char **args2)
+{
+	int fd[2]; // file descriptors
+	pipe (fd); // make pipe
+
+	writeToPipe (args1, fd); // run first and write to pipe
+	if (fork () == 0)
+	{
+		usleep (200);
+
+		/* redirect stdin, close write end and run cmd */
+		dup2 (fd[0], 0);
+		close (fd[1]);
+		execv (args2[0], args2);
+	}
+	else // parent
+	{
+		wait (NULL);
+	}
+
+	usleep (sleepTime);
+
+	/* close unused pipes */
+	close (fd[0]);
+	close (fd[1]);
+	wait (NULL);
+
+}
+
+
+/*
+ 	twoPipes: executes and handles execution of 2 pipes
+ 	and three commands.
+ */
+void twoPipes (char **args1, char **args2, char **args3)
+{
+	int fd1[2], fd2[2]; // descriptors
+
+	writeToPipe (args1, fd1);
+	close (fd1[1]);
+
+	pipe (fd2); // make second pipe
+
+	if (fork () == 0)
+	{
+		usleep (sleepTime);
+		/* redirect read end of first and write end of second*/
+		dup2 (fd1[0], 0);
+		dup2 (fd2[1], 1);
+
+		/* make sure to close all pipes */
+		close (fd1[1]);
+		close (fd1[0]);
+		close (fd2[0]);
+		close (fd2[1]);
+		execv (args2[0], args2);
+	}
+	close (fd1[0]);
+	close (fd2[1]);
+
+	if (fork () == 0)
+	{
+		usleep (sleepTime);
+
+		/* redirect for second pipe only and then close both pipes */
+		dup2 (fd2[0], 0);
+		close (fd1[1]);
+		close (fd1[0]);
+		close (fd2[1]);
+		close (fd2[0]);
+
+		execv (args3[0], args3);
+
+	}
+	close (fd2[0]);
+
+	usleep (sleepTime);
+	wait (NULL);
+	wait (NULL);
+}
+
+
+/*
+ 	determineRunType: given the user input, decide if valid. if valid, determine
+ 	if command is a single command, one pipe or two pipes.
+ */
 void determineRunType (char *cmd1, char *inpPath, char *pipe1, char *cmd2, char *pipe2, char *cmd3)
 {
 	if (strlen (cmd1) < 1)
@@ -90,20 +213,20 @@ void determineRunType (char *cmd1, char *inpPath, char *pipe1, char *cmd2, char 
 							char *args1[] = { cmd1, inpPath, NULL };
 							char *args2[] = { cmd2, NULL };
 							char *args3[] = { cmd3, NULL };
-							pipe_twice (args1, args2, args3);
+							twoPipes (args1, args2, args3);
 
 						}
 						else
 						{
 							char *args1[] = { cmd1, inpPath, NULL };
 							char *args2[] = { cmd2, NULL };
-							pipe_once (args1, args2);
+							onePipe (args1, args2);
 						}
 
 					}
 					else
 					{
-						run_cmd (cmd1, inpPath);
+						singleCommand (cmd1, inpPath);
 					}
 
 				}
@@ -116,163 +239,10 @@ void determineRunType (char *cmd1, char *inpPath, char *pipe1, char *cmd2, char 
 }
 
 
-void run_cmd (char *init_cmd, char *txt_path)
-{
-	char run[inputLimit + 3] = "./";
-	strcat (run, init_cmd);
-	__pid_t forked = fork ();
-	if (forked == 0)
-	{
-		char *args[] = { run, txt_path, NULL };
-		execvp (args[0], args);
-		printf ("\n");
-	}
-	else if (forked < 0)
-	{
-		printf ("encountered error while forking");
-	}
-	else
-	{
-		waitpid (forked, 0, 0);
-		kill (forked, SIGUSR1);
-	}
-}
-
-
-void pipe_once (char **fst_args, char **snd_args)
-{
-	int pipe_ends[2];
-	pipe (pipe_ends);
-	pid_t writer = -1;
-	pid_t reader = -1;
-	write_pipe (writer, fst_args, pipe_ends);
-	reader = fork ();
-	if (reader == 0)
-	{
-		usleep (200);
-		close (pipe_ends[1]);
-		dup2 (pipe_ends[0], 0);
-		execv (snd_args[0], snd_args);
-	}
-	else
-	{
-		wait (NULL);
-	}
-	usleep (200);
-	close (pipe_ends[1]);
-	close (pipe_ends[0]);
-	wait (NULL);
-
-}
-
-
-void pipe_twice (char **fst_args, char **snd_args, char **thd_args)
-{
-	int fst_ends[2], snd_ends[2];
-	pid_t writer = -1;
-	pid_t conn = -1;
-	pid_t reader = -1;
-
-	write_pipe (writer, fst_args, fst_ends);
-	close (fst_ends[1]);
-
-	pipe (snd_ends);
-	conn = fork ();
-
-	if (conn == 0)
-	{
-		usleep(sleepTime);
-		dup2 (fst_ends[0], 0);
-		dup2 (snd_ends[1], 1);
-
-		close (fst_ends[1]);
-		close (fst_ends[0]);
-		close (snd_ends[0]);
-		close (snd_ends[1]);
-		execv (snd_args[0], snd_args);
-	}
-	close (fst_ends[0]);
-	close (snd_ends[1]);
-
-	reader = fork ();
-	if (reader < 0)
-	{
-		printf ("problem while making fork for reader process\n");
-	}
-	else if (reader == 0)
-	{
-		usleep (sleepTime);
-		dup2 (snd_ends[0], 0);
-		close (fst_ends[0]);
-		close (fst_ends[1]);
-		close (snd_ends[0]);
-		close (snd_ends[1]);
-		execv (thd_args[0], thd_args);
-
-	}
-	close (snd_ends[0]);
-
-	usleep (sleepTime);
-	wait (NULL);
-	wait (NULL);
-}
-
-
-void write_pipe (pid_t pid_write, char **args, int *pipe_ends)
-{
-	usleep (sleepTime);
-	pipe (pipe_ends);
-	pid_write = fork ();
-	if (pid_write == 0)
-	{
-		close (pipe_ends[0]);
-		dup2 (pipe_ends[1], 1);
-		execv (args[0], args);
-	}
-}
-
-
-void read_single_pipe (pid_t pid_read, char **args, int *pipe_ends)
-{
-	pid_read = fork ();
-	if (pid_read == 0)
-	{
-		usleep (sleepTime);
-		close (pipe_ends[1]);
-		dup2 (pipe_ends[0], 0);
-		execv (args[0], args);
-	}
-	else
-	{
-		wait (NULL);
-	}
-
-}
-
-
-void read_second_pipe (pid_t pid_read, char **args, int *fst_ends, int *snd_ends)
-{
-	pid_read = fork ();
-	if (pid_read < 0)
-	{
-		printf ("problem while making fork for reader process\n");
-	}
-	else if (pid_read == 0)
-	{
-		usleep (sleepTime);
-
-		dup2 (snd_ends[0], 0);
-
-		close (fst_ends[0]);
-		close (fst_ends[1]);
-		close (snd_ends[0]);
-		close (snd_ends[1]);
-		execv (args[0], args);
-
-	}
-}
-
-
+/*
+ 	main: contains the main loop of the shell and is in charge of getting
+ 	user input.
+ */
 int main (int argc, char **argv)
 {
 	printf ("Usage for my-cat, my-wc and my-uniq\n"
@@ -299,6 +269,7 @@ int main (int argc, char **argv)
 		if (strcmp ("quit", cmd1) != 0)
 		{
 			determineRunType (cmd1, inpPath, pipe1, cmd2, pipe2, cmd3);
+			printf ("\n");
 		}
 		else
 		{
