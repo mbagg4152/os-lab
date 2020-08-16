@@ -120,6 +120,7 @@ int wait(void);
 void wakeup(void *);
 void yield(void);
 int procStat(void);
+int chpr(int, int);
 
 // swtch.S
 void swtch(struct context **, struct context *);

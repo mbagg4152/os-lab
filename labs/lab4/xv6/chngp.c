@@ -23,7 +23,7 @@ main(int argc, char *argv[])
       exit();
   }
 
-  chpr ( pid, priority );
+  chpr (pid, priority );
 
   exit();
 
