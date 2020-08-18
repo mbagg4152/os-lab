@@ -305,16 +305,13 @@ int wait(void) {
 // control via swtch back to the scheduler.
 void
 scheduler(void) {
-	struct proc *p;
-	struct proc *p1;
+	struct proc *p, *p1;
 	struct cpu *c = mycpu();
 	c->proc = 0;
 
 	for (;;) {
-		// Enable interrupts on this processor.
-		sti();
+		sti(); // Enable interrupts on this processor.
 
-		//create a process pointer(highPri); This pointer will be used to point to the high priority process
 		struct proc *highPri = 0; // initialize pointer
 
 		acquire(&ptable.lock);
@@ -323,22 +320,19 @@ scheduler(void) {
 				continue;
 			}
 
-
-			// assign the current process as a high priority process.Compare the high priority process with the other
-			// processes. Remember larger value, lower priority. use process pointer p1 to loop over the process table
-			// for comparison
+			// start with current process being the highest priority process. loop through & compare other priority
+			// values. if the value of the one being compared (p1) is a lesser value, assign it to be the high priority
 			highPri = p;
 			for (p1 = ptable.proc; p1 < &ptable.proc[NPROC]; p1++) {
 				if (p1->state != RUNNABLE) {
 					continue;
 				}
-				// p1 has a lower int val for priority which means it has greater priority
-				if (p1->priority < highPri->priority) {
+				if (p1->priority < highPri->priority) { // p1 has greater priority, reassign highPri
 					highPri = p1;
 				}
 			}
-			p = highPri;
 
+			p = highPri; // set regular proc pointer p to highPri & run as normal
 			c->proc = p;
 			switchuvm(p);
 			p->state = RUNNING;
