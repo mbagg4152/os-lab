@@ -9,6 +9,7 @@ int *ve_nums;
 int total_nums;
 int med, max, min, avg;
 
+
 int *cmd_nums(int arg_count, char *args[]);
 void *num_avg(void *void_nums);
 void *max_val(void *void_nums);
