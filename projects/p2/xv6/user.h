@@ -1,5 +1,6 @@
 struct stat;
 struct rtcdate;
+struct pstat;
 
 // system calls
 int fork(void);
@@ -25,6 +26,7 @@ int sleep(int);
 int uptime(void);
 int procStat(void);
 int chpr(int, int);
+int getpinfo(struct pstat *);
 
 // ulib.c
 int stat(const char *, struct stat *);
@@ -39,3 +41,6 @@ void *memset(void *, int, uint);
 void *malloc(uint);
 void free(void *);
 int atoi(const char *);
+enum procstate {
+    UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE
+};

@@ -1,14 +1,13 @@
 #include "types.h"
 #include "stat.h"
 #include "user.h"
-#include "xv6/pstat.h"
+#include "pstat.h"
 
 int
-main(int argc, char *argv[])
-{
+main(int argc, char *argv[]) {
     struct pstat st;
 
-    if(argc != 2){
+    if (argc != 2) {
         printf(1, "usage: test counter");
         exit();
     }
@@ -16,19 +15,18 @@ main(int argc, char *argv[])
     int i, x, l, j;
     int mypid = getpid();
 
-    for(i = 1; i < atoi(argv[1]); i++){
+    for (i = 1; i < atoi(argv[1]); i++) {
         x = x + i;
     }
 
     getpinfo(&st);
     for (j = 0; j < NPROC; j++) {
-        if (st.inuse[j] && st.pid[j] >= 3 && st.pid[j] == mypid) {
+        if (st.inuse[j] && st.pid[j] == mypid) {
             for (l = 3; l >= 0; l--) {
-                printf(1, "level:%d \t ticks-used:%d\n", l, st.ticks[j][l]);
+                printf(1, "Total time used at P%d = %d ticks\n", l, st.ticks[j][l]);
             }
         }
     }
-    
     exit();
     return 0;
 }

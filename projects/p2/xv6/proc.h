@@ -1,3 +1,4 @@
+
 // Per-CPU state
 struct cpu {
     uchar apicid;                // Local APIC ID
@@ -19,12 +20,16 @@ extern int ncpu;
 // address of the context. The layout of the context matches the layout of the stack in swtch.S at the "Switch
 // stacks" comment. Switch doesn't save eip explicitly, but it is on the stack and allocproc() manipulates it.
 struct context {
-    uint edi;
-    uint esi;
-    uint ebx;
-    uint ebp;
-    uint eip;
+    uint edi; // destination index register
+    uint esi; // source index register
+    uint ebx; // called base register
+    uint ebp; // stack base pointer register
+    uint eip; // index pointer register
 };
+// unused = mark process as unused
+// embryo = used to mark process as used and gives unique pid.
+// sleeping = mark used before releasing the processor. means process is waiting for an event to complete
+// runnable = ready to run but still waiting
 
 enum procstate {
     UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE
@@ -32,48 +37,36 @@ enum procstate {
 
 // Per-process state
 struct proc {
-    uint sz;                        // Size of process memory (bytes)
-    pde_t *pgdir;                   // Page table
-    char *kstack;                   // Bottom of kernel stack for this process
-    enum procstate state;           // Process state
-    int pid;                        // Process ID
-    struct proc *parent;            // Parent process
-    struct trapframe *tf;           // Trap frame for current syscall
-    struct context *context;        // swtch() here to run process
-    void *chan;                     // If non-zero, sleeping on chan
-    int killed;                     // If non-zero, have been killed
-    struct file *ofile[NOFILE];     // Open files
-    struct inode *cwd;              // Current directory
-    char name[16];                  // Process name (debugging)
-    int priority;                   // Process priority
-};
-struct pstat {
-    int inuse[NPROC];               // whether this slot of the process table is in use (1 or 0)
-    int pid[NPROC];                 // PID of each process
-    int priority[NPROC];            // current priority level of each process (0-3)
-    enum procstate state[NPROC];    // current state (e.g., SLEEPING or RUNNABLE) of each process
-    int ticks[NPROC][NLAYER];       // number of ticks each process has accumulated at each of 4 priorities
-    int wait_ticks[NPROC][NLAYER];  // number of ticks each process has waited before being scheduled
+    char *kstack;                       // Bottom of kernel stack for this process
+    char name[16];                      // Process name (debugging)
+    enum procstate state;               // Process state
+    int killed;                         // If non-zero, have been killed
+    int pid;                            // Process ID
+    int priority;                       // Process priority
+    pde_t *pgdir;                       // Page table
+    struct context *context;            // swtch() here to run process
+    struct file *ofile[NOFILE];         // Open files
+    struct inode *cwd;                  // Current directory
+    struct proc *parent;                // Parent process
+    struct trapframe *tf;               // Trap frame for current syscall
+    uint sz;                            // Size of process memory (bytes)
+    void *chan;                         // If non-zero, sleeping on chan
+
+    // added for Project 2
+    int total_ticks[NLAYER];            // Total number of ticks for the process on each layer
+    int wait_time[NLAYER];              // Total time the process has waited on each layer
+    int tmp_ticks;                      // Ticks counter for proc at current layer. resets on priority change.
+    int tmp_wait;                       // Wait counter for proc at current layer. resets on priority change
 };
 
-struct priority3 {
-    struct proc procs[NPROC];       // list of procs
-    int ticks: 8;                   // tick count for current priority
-};
+// signatures for functions added for Project 2
+int is_waiting(struct proc *);
+int procs_exist(int);
+void age(int);
+void demote(int, int);
+void promote(int);
 
-struct priority2 {
-    struct proc procs[NPROC];       // list of procs
-    int ticks: 16;                  // tick count for current priority
-};
 
-struct priority1 {
-    struct proc procs[NPROC];       // list of procs
-    int ticks: 32;                  // tick count for current priority
-};
-
-struct priority0 {
-    struct proc procs[NPROC];       // list of procs
-};
 // Process memory is laid out contiguously, low addresses first:
 //   text
 //   original data and bss

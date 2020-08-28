@@ -22,3 +22,4 @@
 #define SYS_close  21
 #define SYS_procStat 22
 #define SYS_chpr 23
+#define SYS_getpinfo 24
