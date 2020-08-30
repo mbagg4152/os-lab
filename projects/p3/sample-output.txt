@@ -1,0 +1,238 @@
+Input Being Printed Here from the Program:
+
+Person 0: Floors To Visit 1,10,0
+Person 0: Time To Spend  1,1,5
+Person 1: Floors To Visit 3,10,0
+Person 1: Time To Spend  1,2,5
+Person 2: Floors To Visit 5,10,0
+Person 2: Time To Spend  1,3,5
+Person 3: Floors To Visit 7,10,0
+Person 3: Time To Spend  1,4,5
+Person 4  Floors To Visit 9,10,0
+Person 4: Time To Spend  1,5,5
+
+
+Person Number 2: Waiting for elevator at floor 0
+Person Number 0: Waiting for elevator at floor 0
+Person Number 4: Waiting for elevator at floor 0
+Person Number 1: Waiting for elevator at floor 0
+
+Printout From the Elevator:
+Number of people waiting at floor
+Floor Number		Number of People
+0	                  4
+1	                  0
+2	                  0
+3	                  0
+4	                  0
+5	                  0
+6	                  0
+7	                  0
+8	                  0
+9	                  0
+10                        0
+
+Elevator: At floor 0
+Elevator: Heading to max Floor 10
+
+
+
+Person Number 3: Waiting for elevator at floor 0
+                                                                        Elevator: Opening the doors at 0
+                                                                        Elevator: Opening the doors at 0
+                                                                        Elevator: Opening the doors at 0
+                                                                        Elevator: Opening the doors at 0
+
+
+Person Number 1: Taking elevator to floor 3
+Person Number 1: Waiting to get off at floor 3
+Person Number 0: Taking elevator to floor 1
+Person Number 4: Taking elevator to floor 9
+Person Number 4: Waiting to get off at floor 9
+Person Number 0: Waiting to get off at floor 1
+Person Number 2: Taking elevator to floor 5
+Person Number 2: Waiting to get off at floor 5
+                                                                        Elevator Opening the doors at 1
+
+Person Number 0: Got off at floor  1
+Person Number 0: Wandering for 1 seconds
+Person Number 0: Waiting for elevator at floor 1
+                                                                        Elevator: Opening the doors at 3
+
+Person Number 1: Got off at floor  3
+Person Number 1: Wandering for 1 seconds
+Person Number 1: Waiting for elevator at floor 3
+                                                                        Elevator: Opening the doors at 5
+
+Person Number 2: Got off at floor  5
+Person Number 2: Wandering for 1 seconds
+Person Number 2: Waiting for elevator at floor 5
+                                                                        Elevator: Opening the doors at 9
+
+Person Number 4: Got off at floor  9
+Person Number 4: Wandering for 1 seconds
+Person Number 4: Waiting for elevator at floor 9
+                                                                        Elevator: At floor 10
+                                                                        Elevator: Heading to min Floor 0
+                                                                        Elevator: At floor 9
+
+Person Number 4: Taking elevator to floor 10
+Person Number 4: Waiting to get off at floor 10
+                                                                        Elevator: At floor 5
+Person Number 2: Taking elevator to floor 10
+Person Number 2: Waiting to get off at floor 10
+                                                                        Elevator: At floor 3
+Person Number 1: Taking elevator to floor 10
+Person Number 1: Waiting to get off at floor 10
+                                                                        Elevator: At floor 1
+Person Number 0: Taking elevator to floor 10
+Person Number 0: Waiting to get off at floor 10
+                                                                        Elevator: At floor 0
+Person Number 3: Taking elevator to floor 7
+Person Number 3: Waiting to get off at floor 7
+
+Number of people waiting at floor
+Floor Number		Number of People
+0	                    0
+1	                    0
+2	                    0
+3	                    0
+4	                    0
+5	                    0
+6	                    0
+7	                    1
+8	                    0
+9	                    0
+10                          4
+                                                                        Elevator: At floor 0
+                                                                        Elevator: Heading to max Floor 10
+                                                                        Elevator: Opening the doors at 7
+Person Number 3: Got off at floor  7
+Person Number 3: Wandering for 1 seconds
+Person Number 3: Waiting for elevator at floor 7
+                                                                        Elevator: Opening the doors at 10
+                                                                        Elevator: Opening the doors at 10
+                                                                        Elevator: Opening the doors at 10
+Person Number 0: Got off at floor 10
+Person Number 0: Wandering for 1 seconds
+                                                                        Elevator: Opening the doors at 10
+
+Person Number 2: Got off at floor 10
+Person Number 1: Got off at floor 10
+Person Number 1: Wandering for 2 seconds
+Person Number 2: Wandering for 3 seconds
+Person Number 4: Got off at floor 10
+Person Number 4: Wandering for 5 seconds
+Person Number 0: Waiting for elevator at floor 10
+                                                                        Elevator: At floor 10
+                                                                        Elevator: Heading to min Floor 0
+Person Number 1: Waiting for elevator at floor 10
+Person Number 2: Waiting for elevator at floor 10
+                                                                        Elevator: At floor 10
+                                                                        Elevator:  At floor 10
+
+Person Number 0: Taking elevator to floor 0
+Person Number 0: Waiting to get off at floor 0
+Person Number 1: Taking elevator to floor 0
+Person Number 1: Waiting to get off at floor 0
+Person Number 4: Waiting for elevator at floor 10
+                                                                        Elevator:  At floor 7
+Person Number 3: Taking elevator to floor 10
+Person Number 3: Waiting to get off at floor 10
+                                                                        Elevator: At floor 0
+                                                                        Elevator:  At floor 0
+Person Number 0: Got off at floor  0
+Person Number 0: Wandering for 5 seconds
+Person Number 1: Got off at floor  0
+Person Number 1: Wandering for 5 seconds
+
+Printout from Elevator
+Number of people waiting at floor
+Floor Number		Number of People
+0	                    0
+1	                    0
+2	                    0
+3	                    0
+4		            0
+5	                    0
+6	                    0
+7	                    0
+8	                    0
+9	                    0
+10	                    3
+
+
+                                                                        Elevator: At floor 0
+                                                                        Elevator: Heading to max Floor 10
+Person Number 0:Leaving the System Goodbye!
+Person Number 1:Leaving the System Goodbye!
+                                                                        Elevator: Opening the doors at 10
+                                                                        Elevator: Opening the doors at 10
+                                                                        Elevator: Opening the doors at 10
+Person Number 3: Got off at floor 10
+Person Number 2: Taking elevator to floor 0
+Person Number 2: Waiting to get off at floor 0
+Person Number 3: Wandering for 4 seconds
+Person Number 4: Taking elevator to floor 0
+Person Number 4: Waiting to get off at floor 0 Elevator: At floor 10
+                                                                        Elevator: Heading to min Floor 0
+Person Number 3: Waiting for elevator at floor 10
+                                                                        Elevator: At floor 0
+                                                                        Elevator:  At floor 0
+Person Number 2: Got off at floor  0
+Person Number 4: Got off at floor  0
+Person Number 4: Wandering for 5 seconds
+Person Number 2: Wandering for 5 seconds
+
+Printout From Elevator
+Number of people waiting at floor
+Floor Number		Number of People
+0	                    0
+1	                    0
+2	                    0
+3	                    0
+4	                    0
+5	                    0
+6	                    0
+7	                    0
+8	                    0
+9	                    0
+10	                    1
+
+                                                                        Elevator: At floor 0
+                                                                        Elevator: Heading to max Floor 10
+Person Number 4:Leaving the System Goodbye!
+Person Number 2:Leaving the System Goodbye!
+                                                                        Elevator: Opening the doors at 10
+Person Number 3: Taking elevator to floor 0
+Person Number 3: Waiting to get off at floor 0
+                                                                        Elevator: At floor 10
+                                                                        Elevator: Heading to min Floor 0
+                                                                        Elevator: At floor 0
+Person Number 3: Got off at floor  0
+Person Number 3: Wandering for 5 seconds
+
+
+Printout From Elevator
+Number of people waiting at floor
+Floor Number		Number of People
+0	                    0
+1	                    0
+2	                    0
+3	                    0
+4	                    0
+5	                    0
+6	                    0
+7	                    0
+8	                    0
+9	                    0
+10	                    0
+                                                                        Elevator: At floor 0
+                                                                        Elevator: Heading to max Floor 10
+Person Number 3:Leaving the System Goodbye!
+                                                                        Elevator: At floor 10
+                                                                        Elevator: Heading to min Floor 0
+
+
+Waiting for max waiting time. No one is waiting for the elevator. 
+Elevator Leaving The System
