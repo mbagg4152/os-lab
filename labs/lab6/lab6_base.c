@@ -25,22 +25,22 @@ int finished_producers; // number of the producer that finished producing
 
 
 int main(void) {
-    
+
     //initialize random seed
     srand(time(NULL));
     sum = 0;
-    
+
     //A: Create five generator threads
-    
+
     //D: Create print thread
-    
+
     //B: Makes sure that all generator threads has finished before proceeding
-    
+
 
     print_function();// remove this for TASK 2
-    
+
     //E: Makes sure that print thread has finished before proceeding
-    
+
     return (0);
 
 }
@@ -65,18 +65,18 @@ void *generator_function(void) {
     printf("The sum of produced items by thread %ld at the end is: %ld \n", pthread_self(), sum_this_generator);
     printf("--+---+----+----------+---------+---+--+---+------+------+---+--+-\n\n");
     printf("\033[0m");
-   
+
     finished_producers++;
-   
+
     //H: If all generator has finished fire signal for condition variable
-   
+
     return (0);
 }
 
 void *print_function(void) {
-    
+
     //G: Wait until all generator has finished
-    
+
     printf("\033[1;34m");
     printf("\n\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
     printf("The value of counter at the end is: %ld \n", sum);
