@@ -7,3 +7,19 @@
 #define TACK_F              "-f "
 #define TACK_P              "-p "
 #define TACK_W              "-w "
+#define SZE 50
+
+typedef struct Elevator {
+    int max_wait;
+    int top_floor;
+    int direction;
+    int this_floor;
+    int next_floor;
+} elevator;
+
+typedef struct People {
+    int pid;
+    int floors_left;
+    int floor_order[SZE];
+    int wait_order[SZE];
+} person;
