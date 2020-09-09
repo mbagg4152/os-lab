@@ -1,0 +1,7 @@
+[
+  {
+    "directory": "/home/mag/Desktop/os-lab/projects/p3",
+    "command": "/usr/bin/gcc -pthread -o project3 project3.c",
+    "file": "project3.c"
+  }
+]
