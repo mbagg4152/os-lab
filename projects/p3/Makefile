@@ -1,5 +1,5 @@
 run-cmd=gcc -pthread -o
-args=-p 5 -w 8 -f 13 < sample-input.txt
+args=-p 5 -w 3 -f 10 < input.txt
 
 all: project3
 

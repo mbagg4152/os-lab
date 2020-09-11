@@ -7,245 +7,276 @@
 #include <zconf.h>
 
 int main(int argc, char *argv[]) {
-    get_args(argc, argv, &people_count, &max_wander, &floor_count);
-    printf("%d %d %d\n", people_count, max_wander, floor_count);
-    //get_stdin();
-    make_sems();
-    init_structs();
-    thread_ops();
+    check_stdin();
+    get_options(argc, argv, &body_count, &max_time, &tiers);
+    init_values();
+    run_threads();
     return 0;
 }
-/**
- * Starting Functions
-**/
-void get_args(int count, char **args, int *people, int *wander, int *floors) {
-    int tack;
-    while ((tack = getopt(count, args, OPTS)) != -1) {
-        switch (tack) {
-            case TACK_P:
+
+void check_stdin() {
+    if (fseek(stdin, 0, SEEK_END), ftell(stdin) > 0) {
+        rewind(stdin);
+    } else {
+        printf("Either a file was not directed or the file supplied is empty. Exiting.\n");
+        exit(1);
+    }
+}
+
+void get_options(int count, char **args, int *people, int *wander, int *floors) {
+    int arg;
+    while ((arg = getopt(count, args, OPTS)) != -1) {
+        switch (arg) {
+            case OPT_P:
                 *people = atoi(optarg);
                 break;
-            case TACK_W:
+            case OPT_W:
                 *wander = atoi(optarg);
                 break;
-            case TACK_F:
+            case OPT_F:
                 *floors = atoi(optarg);
                 break;
             default:
-                if (optopt == TACK_P || optopt == TACK_W || optopt == TACK_F) {
-                    printf("nothing provided for -p, -w and/or -f\n");
-                }
+                printf("Something is wrong with the supplied options\n");
                 break;
         }
     }
 }
 
-void make_sems() {
-    sem_init(&printing_lock, 0, 1);
-    for (int i = 0; i < 4; i++) {
-        sem_init(&calling_lock[i], 0, 0);
-    }
+void init_values() {
+    sem_init(&display_lock, 0, 1);
     sem_init(&waiting_lock, 0, 1);
-}
+    sem_init(&bottom_lock, 0, 1);
+    for (int i = 0; i < tiers; i++) {
+        sem_init(&moving_lock[i], 0, 0);
+    }
 
-void init_structs() {
-    elevator = (struct Elevator *) malloc(sizeof(struct Elevator));
-    elevator->max_wait = max_wander;
-    elevator->floors = floor_count;
-    elevator->direction = 1;
-    elevator->this_floor = 0;
-    elevator->next_floor = 1;
-    people = (struct Person **) malloc(sizeof(struct Person) * (people_count - 1));
-    peep_thread = (pthread_t *) malloc(sizeof(pthread_t) * (people_count - 1));
+    init_elevator();
+    people = (struct Person **) malloc(sizeof(struct Person) * (body_count - 1));
+    worker_threads = (pthread_t *) malloc(sizeof(pthread_t) * (body_count - 1));
 
-    for (int i = 0; i < people_count; i++) {
+    for (int i = 0; i < body_count; i++) {
         people[i] = (struct Person *) malloc(sizeof(struct Person));
         people[i] = make_person(i);
     }
 }
 
-void thread_ops() {
-    pthread_create(&elev_thread, NULL, move, (void *) elevator);
-    for (int i = 0; i < people_count; i++) {
-        pthread_create(&peep_thread[i], NULL, goto_work, (void *) people[i]);
+void run_threads() {
+    pthread_create(&elev_thread, NULL, move, (void *) lift);
+    for (int i = 0; i < body_count; i++) {
+        pthread_create(&worker_threads[i], NULL, start_ride, (void *) people[i]);
     }
     pthread_join(elev_thread, NULL);
-    for (int i = 0; i < people_count - 1; i++) {
-        pthread_join(peep_thread[i], NULL);
+    for (int i = 0; i < body_count - 1; i++) {
+        pthread_join(worker_threads[i], NULL);
     }
 }
 
-/**
- * Elevator Functions
-**/
+void init_elevator() {
+    lift = (struct Elevator *) malloc(sizeof(struct Elevator));
+    lift->wait = max_time;
+    lift->floors = tiers;
+    lift->direction = 1;
+    lift->this_floor = BOTTOM;
+    lift->next_floor = 1;
+    lift->done = 0;
+}
+
 void *move(void *args) {
     struct Elevator *el = (struct Elevator *) args;
-    int moved = 0;
-    int done = 0;
-    moving_message(UP);
-    while (1) {
-        sleep(1);
+    sleep(WAIT);
+    int slept_once = 0;
+    while (keep_running) {
+        sleep(WAIT);
         el->this_floor = el->next_floor;
+        if (el->this_floor == BOTTOM) {
+            sem_wait(&bottom_lock);
+            on_bottom = 1;
+            sem_post(&bottom_lock);
+        } else {
+            if (on_bottom) {
+                sem_wait(&bottom_lock);
+                on_bottom = 0;
+                sem_post(&bottom_lock);
+            }
+        }
+
         sem_wait(&waiting_lock);
-        if (people_queue[el->this_floor]) {
-            halt(el->this_floor);
-            moved = 1;
+        if (currently_waiting[el->this_floor]) {
+            el->passed = 0;
+            el->done = 0;
+            open_doors(el->this_floor);
+        } else {
+            el->passed++;
+            printf("%s Passing floor %d\n", PRINT_E, el->this_floor);
         }
         sem_post(&waiting_lock);
-        int dir_change = shift(el->direction, el->this_floor);
-        if (!dir_change) {
-            if (el->direction == UP) {
-                el->next_floor = el->this_floor + 1;
+
+
+        if (el->passed >= ((tiers - 1) * 2)) {
+            if (el->done) {
+                sem_wait(&display_lock);
+                printf("%s Made full trip & waited but nobody showed up. Leaving...\n", PRINT_E);
+                sem_post(&display_lock);
+                pthread_exit(0);
             } else {
-                el->next_floor = el->this_floor - 1;
+                sem_wait(&display_lock);
+                printf("%s Couldn't find anybody waiting, sleeping for %d sec.\n", PRINT_E, el->wait);
+                sem_post(&display_lock);
+                sleep(el->wait);
+                el->done = 1;
             }
+        }
+
+        int change_direction = swap_direction(el->this_floor, (el->floors - 1));
+        if (change_direction == MOVE_UP) {
+            going_up(el);
+        } else if (change_direction == MOVE_DOWN) {
+            going_down(el);
         } else {
-            if (el->direction == UP) {
-                moving_message(DOWN);
-                el->next_floor = el->this_floor - 1;
-            } else {
-                if (!moved) {
-                    end_check(done, el->max_wait);
-                    done = 1;
-                } else {
-                    done = 0;
-                }
-                moving_message(UP);
-                el->next_floor = el->this_floor + 1;
-                moved = 0;
+            if (el->direction == D_UP) {
+                el->next_floor++;
+
+            } else if (el->direction == D_DOWN) {
+                el->next_floor--;
             }
-            el->direction = !el->direction;
         }
     }
-
 }
 
-void halt(int floor) {
-    sem_wait(&printing_lock);
-    printf("Elevator opening doors @ %i\n", floor);
-    sem_post(&printing_lock);
-    sem_post(&calling_lock[floor]);
-    sleep(MIN_WANDER);
-    sem_wait(&calling_lock[floor]);
+void going_up(struct Elevator *e) {
+    sem_wait(&display_lock);
+    printf("\n%s Going Up!\n", PRINT_E);
+    sem_post(&display_lock);
+    show_waiting_people();
+    e->direction = D_UP;
+    e->next_floor++;
 }
 
-void moving_message(int dir) {
-    sem_wait(&printing_lock);
-    if (dir) {
-        printf("Elevator - Going Up!\n");
-        for (int i = 0; i < floor_count; i++) {
-            printf("%i people waiting on floor %i\n", people_queue[i], i);
-        }
-    } else {
-        printf("Elevator - Heading Down!\n");
-    }
-
-    sem_post(&printing_lock);
+void going_down(struct Elevator *e) {
+    sem_wait(&display_lock);
+    printf("\n%s Heading Down!\n", PRINT_E);
+    sem_post(&display_lock);
+    show_waiting_people();
+    e->direction = D_DOWN;
+    e->next_floor--;
 }
 
-void end_check(int done, int sleep_time) {
-    if (done) {
-        sem_wait(&printing_lock);
-        printf("\nElevator is leaving\n");
-        sem_post(&printing_lock);
-        exit(0);
-
-    }
-    sem_wait(&printing_lock);
-    printf("\nelevator at bottom floor with no waiting people\nsleeping for %i seconds\n", sleep_time);
-    sem_post(&printing_lock);
-    sleep(sleep_time);
+void open_doors(int floor) {
+    sem_wait(&display_lock);
+    printf("%s Opening on floor %i\n", PRINT_E, floor);
+    sem_post(&display_lock);
+    sem_post(&moving_lock[floor]);
+    sleep(WAIT);
+    sem_wait(&moving_lock[floor]);
 }
 
-int shift(int dir, int floor) {
-    int changed = 0;
-    if ((dir && floor == floor_count) || (!(dir && floor == 0))) {
-        changed = 1;
-    }
-    return changed;
-}
-
-/**
- * Person Functions
-**/
-struct Person *make_person(int pid) {
-    struct Person *person = (struct Person *) malloc(sizeof(struct Person));
-    sem_wait(&printing_lock);
-    printf("person %d:\nfloor\t\ttime\n", pid);
-    int visited;
-    scanf("%i", &visited);
-    person->pid = pid;
-    person->floors_left = visited;
-
-    for (int i = 0; i < visited; i++) {
-        scanf("%i", &person->floor_order[i]);
-        scanf("%i", &person->wait_order[i]);
-
-        printf("%i\t\t", person->floor_order[i]);
-        printf("%i\n", person->wait_order[i]);
+void show_waiting_people() {
+    sem_wait(&display_lock);
+    printf("Floor\t\tNo. of people waiting\n");
+    for (int i = 0; i < tiers; i++) {
+        printf("%i\t\t%i\n", i, currently_waiting[i]);
     }
     printf("\n");
-    sem_post(&printing_lock);
+    sem_post(&display_lock);
+}
+
+int swap_direction(int current, int top) {
+    if (current == top) {
+        return MOVE_DOWN;
+    } else if (current == BOTTOM) {
+        return MOVE_UP;
+    } else {
+        return 0;
+    }
+}
+
+struct Person *make_person(int new_pid) {
+    struct Person *person = (struct Person *) malloc(sizeof(struct Person));
+    sem_wait(&display_lock);
+    printf("%s %d\n%sFloor\t\tTime\n", PRINT_P, new_pid, PRINT_T);
+
+    int wandering_pairs;
+    scanf("%i", &wandering_pairs); // read in line of single int from stdin
+    person->pid = new_pid;
+    person->floors_left = wandering_pairs;
+
+    for (int i = 0; i < wandering_pairs; i++) {
+        scanf("%i", &person->floors[i]);
+        scanf("%i", &person->times[i]);
+
+        printf("%s%i\t\t", PRINT_T, person->floors[i]);
+        printf("%i\n", person->times[i]);
+    }
+    person->this_floor = person->floors[0];
+    printf("\n");
+    sem_post(&display_lock);
     return person;
 
 }
 
-void *goto_work(void *v_params) {
-    struct Person *worker = (struct Person *) v_params;
-    int f_index = 0;
-    int next_floor = 0;
-    int this_floor = 0;
-    int this_wait = 0;
-    pid_t this_pid;
-
-    while (1) {
-        this_pid = worker->pid;
-        this_wait = worker->wait_order[f_index];
-        next_floor = worker->floor_order[f_index];
-        enter_floor(next_floor, this_pid);
-        this_floor = next_floor;
-        printf("Person %d is wandering on floor %i for %i seconds", this_pid, this_floor, this_wait);
-        sem_post(&printing_lock);
-        sleep(this_wait);
-        if (!(f_index < (worker->floors_left - 1))) {
-            printf("person %d is out of here\n", this_pid);
-            pthread_exit(0);
+void *start_ride(void *v_person) {
+    struct Person *worker = (struct Person *) v_person;
+    int index = 0, next_floor = 0, wander_time = 0, this_floor = 0;
+    while (keep_running) {
+        wander_time = worker->times[index];
+        if (wander_time > max_time) {
+            wander_time = max_time;
         }
-        wait_to_enter(this_pid, this_floor);
-        f_index++;
+        next_floor = worker->floors[index];
+        this_floor = worker->this_floor;
+        leave_lift(worker);
+        worker->this_floor = next_floor;
+
+        sem_wait(&display_lock);
+        printf("%s %d: Wandering on floor %i for %i sec.\n", PRINT_P,
+               worker->pid, this_floor, wander_time);
+        sem_post(&display_lock);
+
+        sleep(wander_time);
+        if (worker->floors_left < 1) {
+            if (on_bottom) {
+                sem_wait(&display_lock);
+                printf("%s %d: Leaving... \n", PRINT_P, worker->pid);
+                sem_post(&display_lock);
+                pthread_exit(0);
+            } else {
+                continue;
+            }
+        }
+        enter_lift(worker);
+        index++;
+        worker->floors_left--;
     }
-}
-
-void enter_floor(int floor, int pid) {
-    mod_queue(floor, 1);
-    sem_wait(&printing_lock);
-    printf("person %d is waiting for elevator to hit floor %d\n", pid, floor);
-    sem_post(&printing_lock);
-    sem_wait(&calling_lock[floor]);
-    sem_wait(&printing_lock);
-    printf("person %d walking onto floor %d\n", pid, floor);
-    sem_post(&calling_lock[floor]);
-    sem_post(&printing_lock);
-    mod_queue(floor, 0);
 
 }
 
-void wait_to_enter(int pid, int floor) {
-    mod_queue(floor, 1);
-    sem_wait(&printing_lock);
-    printf("person %d is waiting at floor %d\n", pid, floor);
-    sem_post(&waiting_lock);
-    sem_post(&calling_lock[floor]);
-    mod_queue(floor, 0);
-}
-
-void mod_queue(int floor, int add) {
+void leave_lift(struct Person *p) {
     sem_wait(&waiting_lock);
-    if (add) {
-        people_queue[floor]++;
-    } else {
-        people_queue[floor]--;
-    }
+    currently_waiting[p->this_floor]++;
+    sem_post(&waiting_lock);
+
+    sem_wait(&moving_lock[p->this_floor]);
+    sem_post(&moving_lock[p->this_floor]);
+
+    sem_wait(&waiting_lock);
+    currently_waiting[p->this_floor]--;
     sem_post(&waiting_lock);
 }
 
+void enter_lift(struct Person *p) {
+    sem_wait(&waiting_lock);
+    currently_waiting[p->this_floor]++;
+    sem_post(&waiting_lock);
+
+    sem_wait(&moving_lock[p->this_floor]);
+    sem_wait(&display_lock);
+    printf("%s %d: Getting on elevator on floor %d\n", PRINT_P, p->pid, p->this_floor);
+    sem_post(&display_lock);
+    sem_post(&waiting_lock);
+    sem_post(&moving_lock[p->this_floor]);
+
+    sem_wait(&waiting_lock);
+    currently_waiting[p->this_floor]--;
+    sem_post(&waiting_lock);
+}

@@ -270,5 +270,5 @@ Person Number 3:Leaving the System Goodbye!
 Elevator: At floor 10
 Elevator: Heading to min Floor 0
 
-Waiting for max waiting time. No one is waiting for the elevator. 
+Waiting for max waiting time. No one is enter_lift for the elevator.
 Elevator Leaving The System

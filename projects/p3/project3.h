@@ -1,59 +1,78 @@
+#define ARR_SZE             300                 // array size
+#define BOTTOM              0                   // people start and end at floor 0
+#define DEF_FLOORS          10                  // default number of floors
+#define DEF_PEOPLE          1                   // default number of people
+#define DEF_TIME            10                  // default wandering time
+#define D_DOWN              0                   // down represented by 0
+#define D_UP                1                   // up represented by 1
+#define MOVE_DOWN           33                  // arbitrary flag value for when elevator is at top
+#define MOVE_UP             22                  // arbitrary flag value for when elevator is at bottom
+#define OPTS                "p:w:f:"            // pattern used in getopt to read cmdline args
+#define OPT_F               'f'                 // number of floors option
+#define OPT_P               'p'                 // number of people option
+#define OPT_W               'w'                 // wander time option
+#define PRINT_E             "Elevator:"         // prefix for elevator print statements
+#define PRINT_P             "\t\t\t\t\tPerson"  // prefix for person print statements
+#define PRINT_T             "\t\t\t\t\t"        // used to keep items aligned for person statements
+#define WAIT                1                   // elevator wait time
+
 #include <semaphore.h>
-#define BASE                0       // people start and end at floor 0
-#define DEFAULT_FLOORS      10      // default number of floors
-#define DEFAULT_PEOPLE      1       // default number of people
-#define DEFAULT_TIME        10      // default wandering time
-#define MIN_WANDER          1       // people must wander for at least 1 sec
-#define OPEN_HOURS          9       // from 8am - 5pm
-#define OPTS "p:w:f:"
-#define SZE 256
-#define TACK_F              'f'
-#define TACK_P              'p'
-#define TACK_W              'w'
-#define UP 1
-#define DOWN 0
-typedef struct Elevator {
-    int max_wait;
-    int floors;
-    int direction;
-    int this_floor;
-    int next_floor;
-} Elevator;
 
-typedef struct Person {
-    int pid;
-    int floors_left;
-    int floor_order[SZE];
-    int wait_order[SZE];
-} Person;
 
-char *file_data;
-int data_size = SZE;
-int floor_count = DEFAULT_FLOORS;
-int max_wander = DEFAULT_TIME;
-int people_count = DEFAULT_PEOPLE;
-sem_t calling_lock[SZE];
-sem_t printing_lock;
-sem_t waiting_lock;
-struct Elevator *elevator;
+struct Elevator {
+    int direction;          // direction of elevator travel
+    int done;               // program-ending flag
+    int floors;             // number of floors
+    int next_floor;         // either +1 or -1 of this_floor
+    int passed;             // counter for number of floors passed
+    int this_floor;         // current floor
+    int wait;               // max wait/wander time
+};
+
+struct Person {
+    int floors[ARR_SZE];    // floors to travel to
+    int floors_left;        // remaining floors to visit
+    int pid;                // unique personal id
+    int this_floor;         // current floor
+    int times[ARR_SZE];     // time to be spent on each floor
+};
+
+sem_t moving_lock[ARR_SZE]; // used to block on different floors when one of the threads' items is moving
+sem_t display_lock;         // used to surround print statements
+sem_t waiting_lock;         // used when modifying the number of people waiting on each floor
+sem_t bottom_lock;          // used when modifying flag which is set to 1 when elevator is at bottom
+
+
+// assign default values to each var in case they're not supplied in args
+int tiers = DEF_FLOORS;     // number of floors in the building
+int max_time = DEF_TIME;    // max wandering time
+int body_count = DEF_PEOPLE;// number of people
+int keep_running = 1;
+
+struct Elevator *lift;
 struct Person **people;
-pthread_t *peep_thread;
+pthread_t *worker_threads;
 pthread_t elev_thread;
-int people_queue[SZE];
 
-void get_args(int count, char **args, int *people, int *wander, int *floors);
-void make_sems();
-void init_structs();
-void thread_ops();
+int currently_waiting[ARR_SZE];
+int on_bottom = 0;
 
-struct Person *make_person(int pid);
-void *goto_work(void *v_params);
-void enter_floor(int floor, int pid);
-void wait_to_enter(int pid, int floor);
-void mod_queue(int floor, int add);
+void check_stdin();
+void get_options(int count, char **args, int *people, int *wander, int *floors);
+void init_values();
+void run_threads();
 
-void moving_message(int dir);
+int swap_direction(int current, int top);
 void *move(void *args);
-void halt(int floor);
-void end_check(int done, int sleep_time);
-int shift(int dir, int floor);
+void going_down(struct Elevator *e);
+void going_up(struct Elevator *e);
+void init_elevator();
+void open_doors(int floor);
+void show_waiting_people();
+
+struct Person *make_person(int new_pid);
+void *start_ride(void *v_person);
+void enter_lift(struct Person *p);
+void leave_lift(struct Person *p);
+
+
