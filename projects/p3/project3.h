@@ -63,16 +63,16 @@ void init_values();
 void run_threads();
 
 int swap_direction(int current, int top);
-void *move(void *args);
+void *move_elevator(void *args);
 void going_down(struct Elevator *e);
 void going_up(struct Elevator *e);
 void init_elevator();
 void open_doors(int floor);
 void show_waiting_people();
 
-struct Person *make_person(int new_pid);
-void *start_ride(void *v_person);
-void enter_lift(struct Person *p);
-void leave_lift(struct Person *p);
+struct Person *init_person(int new_pid);
+void *start_ride(void *void_param);
+void enter_lift(struct Person *mortal);
+void leave_lift(struct Person *mortal);
 
 
