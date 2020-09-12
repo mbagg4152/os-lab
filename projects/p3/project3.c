@@ -7,7 +7,6 @@
 #include <zconf.h>
 #include <fcntl.h>
 int main(int argc, char *argv[]) {
-    sem_unlink(COUNT_NAME);
     check_stdin();
     get_options(argc, argv, &body_count, &max_time, &tiers);
     init_values();
@@ -16,6 +15,10 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
+/*
+ * Makes sure that there is data in stdin before creating each person. If stdin is empty, then the function
+ * exits the program.
+ */
 void check_stdin() {
     if (fseek(stdin, 0, SEEK_END), ftell(stdin) > 0) {
         rewind(stdin);
@@ -25,6 +28,9 @@ void check_stdin() {
     }
 }
 
+/*
+ * Parse command line arguments to get the number of people, max wait time and floor count.
+ */
 void get_options(int a_count, char **o_args, int *p_count, int *w_time, int *f_count) {
     int arg;
     while ((arg = getopt(a_count, o_args, OPTS)) != -1) {
@@ -45,27 +51,29 @@ void get_options(int a_count, char **o_args, int *p_count, int *w_time, int *f_c
     }
 }
 
+/*
+ * Initialize important values, mostly semaphores and global variables.
+ */
 void init_values() {
-    ready_quit_count = 0;
     can_quit = false;
-    top_floor = tiers - 1;
     last_person_index = body_count - 1;
+    left_system = 0;
+    ready_quit_count = 0;
+    top_floor = tiers - 1;
 
     for (int i = 0; i < tiers; i++) {
         can_exit[i] = false;
         can_enter[i] = false;
     }
-    sem_init(&display_lock, 0, 1);
-    sem_init(&waiting_lock, 0, 1);
-    sem_init(&bottom_lock, 0, 1);
-    sem_init(&arrival_lock, 0, 1);
-    sem_init(&leave_lock, 0, 1);
-    sem_init(&changing_lock, 0, 1);
-    sem_init(&crit_lock, 0, 1);
+
     sem_init(&allowed_quit, 0, 1);
+    sem_init(&arrival_lock, 0, 1);
+    sem_init(&display_lock, 0, 1);
+    sem_init(&left_check, 0, 1);
     sem_init(&ready_check, 0, 1);
+    sem_init(&waiting_lock, 0, 1);
+
     for (int i = 0; i < tiers; i++) {
-        sem_init(&moving_lock[i], 0, 0);
         sem_init(&allowed_entry[i], 0, 1);
         sem_init(&allowed_exit[i], 0, 1);
     }
@@ -80,15 +88,18 @@ void init_values() {
     }
 }
 
+/*
+ * Executes the elevator and people threads.
+ */
 void run_threads() {
     sem_wait(&arrival_lock);
 
     for (int i = 0; i < body_count; i++) {
-        pthread_create(&worker_threads[i], NULL, start_ride, (void *) people[i]);
+        pthread_create(&worker_threads[i], NULL, riding_elevator, (void *) people[i]);
     }
-    sem_post(&arrival_lock);
-    pthread_create(&elev_thread, NULL, move_elevator, (void *) lift);
 
+    sem_post(&arrival_lock);
+    pthread_create(&elev_thread, NULL, moving_elevator, (void *) lift);
 
     for (int i = 0; i < body_count - 1; i++) {
         pthread_join(worker_threads[i], NULL);
@@ -97,18 +108,20 @@ void run_threads() {
     exit(0);
 }
 
+/*
+ * Set elevator values
+ */
 void init_elevator() {
     lift = (struct Elevator *) malloc(sizeof(struct Elevator));
     lift->direction = D_UP;
-    lift->done = 0;
-    lift->floors = tiers;
     lift->next_floor = 1;
     lift->this_floor = BASE;
-    lift->wait = max_time;
-//    can_exit[0] = true;
 }
 
-int lock_print(const char *message, ...) {
+/*
+ * Printing function used in leu of surrounding each print statement with sem_wait & sem_lock.
+ */
+int protected_print(const char *message, ...) {
     sem_wait(&display_lock);
     char print_string[PRINT_LEN];
     va_list p_args;
@@ -120,29 +133,26 @@ int lock_print(const char *message, ...) {
     return 0;
 }
 
-void *move_elevator(void *args) {
-    sem_wait(&arrival_lock);
+/*
+ * Main logic for simulating the movement of an elevator. The elevator goes all the way to the top and all
+ * the way to the bottom until all of the people have left.
+ */
+void *moving_elevator(void *args) {
+    sem_wait(&arrival_lock); // wait for all people to arrive
     struct Elevator *hoist = (struct Elevator *) args;
-    int people_waiting_on_floor;
-    int people_ready_to_quit;
-    int sval;
+    // int vals used to store temporary values from sem-protected globals
+    int people_waiting_on_floor, people_ready_to_quit, finished;
 
-    while (keep_running) {
+    while (1) {
+        sem_wait(&left_check);
+        finished = left_system;
+        sem_post(&left_check);
 
-        if (hoist->passed >= (top_floor * 2)) {
-            if (hoist->this_floor == BASE) {
-                hoist->done = 1;
-                lock_print("%s Nobody waiting, sleeping for %d sec.\n", PRINT_E, hoist->wait);
-                if (!currently_waiting[hoist->this_floor]) {
-                    lock_print("%s Made full trip & waited but nobody showed up. Leaving...\n", PRINT_E);
-                    pthread_exit(0);
-                }
-
-            } else {
-                continue;
-            }
-
+        if (finished == body_count) {
+            protected_print("%s \"All patrons have left the system and so shall I\"\n", PRINT_E);
+            pthread_exit(0);
         }
+
         sem_wait(&waiting_lock);
         people_waiting_on_floor = currently_waiting[hoist->this_floor];
         sem_post(&waiting_lock);
@@ -151,28 +161,27 @@ void *move_elevator(void *args) {
         people_ready_to_quit = ready_quit_count;
         sem_post(&ready_check);
 
-
+        // open doors if people are waiting or are ready to exit the system
         if ((people_waiting_on_floor) || (people_ready_to_quit && hoist->this_floor == BASE)) {
             hoist->passed = 0;
-            hoist->done = 0;
-            open_doors(hoist->this_floor, people_ready_to_quit);
+            open_doors(hoist->this_floor);
 
         } else {
             hoist->passed++;
         }
-        if (hoist->this_floor == BASE) {
+        if (hoist->this_floor == BASE) { // if on bottom start going up
             if (hoist->direction == D_DOWN) {
                 show_waiting_people(D_UP);
                 hoist->direction = D_UP;
             }
             hoist->next_floor++;
-        } else if (hoist->this_floor == top_floor) {
+        } else if (hoist->this_floor == top_floor) { // if on top start going down
             if (hoist->direction == D_UP) {
                 show_waiting_people(D_DOWN);
                 hoist->direction = D_DOWN;
             }
             hoist->next_floor--;
-        } else {
+        } else { // for all other floors, increment or decrement next floor depending on direction
             if (hoist->direction == D_UP) {
                 hoist->next_floor++;
             } else if (hoist->direction == D_DOWN) {
@@ -180,14 +189,18 @@ void *move_elevator(void *args) {
             }
         }
 
-
         hoist->this_floor = hoist->next_floor;
         sleep(1);
-
     }
 }
 
-void open_doors(int floor, int want_leave) {
+/*
+ * Simulate opening the elevator doors by allowing people to enter or leave on the current level and then
+ * revoking said privileges after waiting for 1 second.
+ */
+void open_doors(int floor) {
+
+    // allow people to exit and enter
     sem_wait(&allowed_exit[floor]);
     can_exit[floor] = true;
     sem_post(&allowed_exit[floor]);
@@ -201,10 +214,11 @@ void open_doors(int floor, int want_leave) {
         sem_post(&allowed_quit);
     }
 
-    lock_print("%s Opening on floor %i\n", PRINT_E, floor);
+    protected_print("%s Opening on floor %i\n", PRINT_E, floor);
+    // wait for passengers
     sleep(WAIT);
 
-
+    // 'close' the doors and keep moving
     sem_wait(&allowed_exit[floor]);
     can_exit[floor] = false;
     sem_post(&allowed_exit[floor]);
@@ -216,12 +230,16 @@ void open_doors(int floor, int want_leave) {
     sem_wait(&allowed_quit);
     can_quit = false;
     sem_post(&allowed_quit);
-
 }
 
+/*
+ * Displays a list of people waiting for the elevator on each level
+ */
 void show_waiting_people(int direction) {
+    // will hold the final output string the number of people waiting on each level is shown
     char *message = NULL;
     size_t msg_size = 0;
+    // used to 'concatenate' values to a string
     FILE *print_stream = open_memstream(&message, &msg_size);
 
     if (direction == D_UP) {
@@ -238,22 +256,25 @@ void show_waiting_people(int direction) {
             fprintf(print_stream, "\n");
             format_counter = 0;
         } else {
-
             format_counter++;
         }
 
     }
     fprintf(print_stream, "\n\n");
     fclose(print_stream);
-    lock_print("%s", message);
+    protected_print("%s", message);
     free(message);
 }
 
+/*
+ * Create each person in the people array based off of the data read from stdin.
+ */
 struct Person *init_person(int new_pid) {
     struct Person *person = (struct Person *) malloc(sizeof(struct Person));
-//    sem_wait(&display_lock);
+    // will hold the final output string after each person is made
     char *message = NULL;
     size_t msg_size = 0;
+    // used to 'concatenate' values to a string
     FILE *print_stream = open_memstream(&message, &msg_size);
     int wandering_pairs;
     scanf("%i", &wandering_pairs); // read in line of single int from stdin
@@ -272,28 +293,28 @@ struct Person *init_person(int new_pid) {
             person->floors[i] = top_floor;
         }
         person->wandered[i] = 0;
-        fprintf(print_stream, "Person %d: will wait %i sec. on floor %i\n",
+        fprintf(print_stream, "Person %d: will wander for %i sec. on floor %i\n",
                 person->pid, person->times[i], person->floors[i]);
-//        printf("Person %d: will wait %i sec. on floor %i\n",
-//               person->pid, person->times[i], person->floors[i]);
     }
     person->this_floor = person->floors[0];
     if (person->this_floor > top_floor) {
         person->this_floor = top_floor;
     }
     fclose(print_stream);
-    lock_print("%s", message);
+    protected_print("%s", message);
     free(message);
-//    sem_post(&display_lock);
     return person;
 
 }
 
-void *start_ride(void *void_param) {
+/*
+ * Main logic for simulating a person riding in an elevator.
+ */
+void *riding_elevator(void *void_param) {
     struct Person *human = (struct Person *) void_param;
 
     int index = 0, next_floor = 0, current_wander = 0, wandered_floor = 0;
-    while (keep_running) {
+    while (1) {
 
         current_wander = human->times[index];
 
@@ -316,7 +337,8 @@ void *start_ride(void *void_param) {
             ready = can_quit;
             sem_post(&allowed_quit);
 
-            lock_print("%s %d: Ready to leave the system ", PRINT_P, human->pid);
+            protected_print("%s %d: Ready to leave the system ", PRINT_P, human->pid);
+            // cannot leave the elevator until the elevator reaches the ground
             if (!ready) {
                 for (;;) {
                     sleep(1);
@@ -330,12 +352,16 @@ void *start_ride(void *void_param) {
             ready_quit_count--;
             sem_post(&ready_check);
 
-            lock_print("%s %d: \"I'm outta here\"", PRINT_P, human->pid);
+            sem_wait(&left_check);
+            left_system++;
+            sem_post(&left_check);
+
+            protected_print("%s %d: \"I'm outta here\"", PRINT_P, human->pid);
             pthread_exit(0);
 
         }
 
-        leave_lift(human, current_wander);
+        wander_floor(human, current_wander);
         wandered_floor = human->this_floor;
 
         if (human->wandered[wandered_floor]) {
@@ -349,7 +375,10 @@ void *start_ride(void *void_param) {
 
 }
 
-void leave_lift(struct Person *mortal, int time) {
+/*
+ * Simulate person leaving the elevator and wandering on the floor.
+ */
+void wander_floor(struct Person *mortal, int time) {
     if (!mortal->done) {
         sem_wait(&waiting_lock);
         currently_waiting[mortal->this_floor]++;
@@ -361,7 +390,8 @@ void leave_lift(struct Person *mortal, int time) {
         sem_wait(&allowed_exit[floor]);
         ready = can_exit[floor];
         sem_post(&allowed_exit[floor]);
-        lock_print("%s %d: Taking elevator to floor %d", PRINT_P, mortal->pid, floor);
+        protected_print("%s %d: Taking elevator to floor %d", PRINT_P, mortal->pid, floor);
+        // cannot leave until elevator is on the same floor
         if (!ready) {
             for (;;) {
                 sleep(1);
@@ -373,8 +403,8 @@ void leave_lift(struct Person *mortal, int time) {
         }
 
 
-        lock_print("%s %d: Wandering on floor %i for %i sec.", PRINT_P,
-                   mortal->pid, mortal->this_floor, time);
+        protected_print("%s %d: Wandering on floor %i for %i sec.", PRINT_P,
+                        mortal->pid, mortal->this_floor, time);
         sleep(time);
         mortal->wandered[mortal->this_floor] = 1;
 
@@ -385,6 +415,9 @@ void leave_lift(struct Person *mortal, int time) {
     }
 }
 
+/*
+ * Simulate person waiting for the elevator to pick them up when they are done wandering.
+ */
 void enter_lift(struct Person *mortal) {
     if (!mortal->done) {
 
@@ -409,7 +442,7 @@ void enter_lift(struct Person *mortal) {
             }
         }
 
-        lock_print("%s %d: Entering elevator on floor %d", PRINT_P, mortal->pid, mortal->this_floor);
+        protected_print("%s %d: Entering elevator on floor %d", PRINT_P, mortal->pid, mortal->this_floor);
 
 
         sem_wait(&waiting_lock);
